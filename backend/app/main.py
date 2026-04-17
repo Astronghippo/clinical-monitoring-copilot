@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routes import analyses, datasets, protocols
+from app.routes import analyses, datasets, findings, protocols
 
 app = FastAPI(title="Clinical Monitoring Copilot")
 
@@ -22,3 +22,4 @@ def health() -> dict[str, str]:
 app.include_router(protocols.router)
 app.include_router(datasets.router)
 app.include_router(analyses.router)
+app.include_router(findings.router)

@@ -35,6 +35,9 @@ class ProtocolOut(BaseModel):
     study_id: str
     filename: str
     created_at: datetime
+    # Parsed ProtocolSpec (visits + eligibility). Allows the frontend to render
+    # a preview of what Claude extracted before the user runs analysis.
+    spec_json: dict | None = None
 
 
 class DatasetOut(BaseModel):

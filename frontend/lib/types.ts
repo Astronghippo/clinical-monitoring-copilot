@@ -22,15 +22,43 @@ export interface Analysis {
   findings: Finding[];
 }
 
+export interface VisitDef {
+  visit_id: string;
+  name: string;
+  nominal_day: number;
+  window_minus_days: number;
+  window_plus_days: number;
+  required_procedures: string[];
+}
+
+export interface EligibilityCriterion {
+  criterion_id: string;
+  kind: "inclusion" | "exclusion";
+  text: string;
+}
+
+export interface ProtocolSpec {
+  study_id: string;
+  visits: VisitDef[];
+  eligibility: EligibilityCriterion[];
+}
+
 export interface Protocol {
   id: number;
   study_id: string;
   filename: string;
   created_at: string;
+  spec_json?: ProtocolSpec | null;
 }
 
 export interface Dataset {
   id: number;
   name: string;
   created_at: string;
+}
+
+export interface QueryLetter {
+  subject_line: string;
+  body: string;
+  reply_by: string;
 }

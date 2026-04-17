@@ -26,7 +26,11 @@ export function ProgressIndicator({ status, startedAt }: Props) {
   const [elapsed, setElapsed] = useState<number>(0);
 
   useEffect(() => {
-    const startMs = new Date(startedAt).getTime();
+    // Server returns naive ISO timestamps (e.g. "2026-04-17T21:09:07.117789")
+    // — they're UTC, but JavaScript parses timezone-less ISO strings as LOCAL.
+    // Append 'Z' when missing so we compute elapsed correctly across timezones.
+    const hasTZ = /Z$|[+-]\d{2}:?\d{2}$/.test(startedAt);
+    const startMs = new Date(hasTZ ? startedAt : startedAt + "Z").getTime();
     const update = () =>
       setElapsed(Math.max(0, Math.floor((Date.now() - startMs) / 1000)));
     update();
