@@ -46,7 +46,11 @@ _PROMPT = _PROMPT_PATH.read_text()
 
 
 class CompletenessAnalyzer:
-    """LLM-driven check that every required procedure was captured at each visit."""
+    """LLM-driven check that every required procedure was captured at each visit.
+
+    Batched: one LLM call per subject (bundles all their visits), rather than
+    one call per subject×visit. Reduces API volume ~5x and sidesteps rate limits.
+    """
     name = "completeness"
 
     def __init__(
@@ -59,33 +63,51 @@ class CompletenessAnalyzer:
 
     def run(self, *, spec: ProtocolSpec, dataset: PatientDataset) -> list[Finding]:
         findings: list[Finding] = []
-        # Fuzzy visit matching: build normalized lookup once.
         visits_by_norm = {normalize_visit_name(v.name): v for v in spec.visits}
 
         for sid in dataset.subjects():
-            visits = dataset.visits_for(sid)
-            for _, row in visits.iterrows():
+            subject_visits = dataset.visits_for(sid)
+            # Build the per-subject batch payload: one row per (visit-with-required-procs).
+            batch_rows: list[dict] = []
+            vdefs: list = []
+            for _, row in subject_visits.iterrows():
                 vdef = visits_by_norm.get(normalize_visit_name(row["VISIT"]))
                 if not vdef or not vdef.required_procedures:
                     continue
                 captured = dataset.procedures_at(sid, vdef.name)
-                payload = {
-                    "subject_id": sid,
+                batch_rows.append({
+                    "visit_id": vdef.visit_id,
                     "visit": vdef.name,
                     "required": vdef.required_procedures,
                     "captured_testcodes": list(captured),
-                    "testcode_to_procedure": self._map,
-                }
-                result = self._llm.json_completion(
-                    system=_PROMPT, user=json.dumps(payload)
-                )
-                for proc in result.get("missing", []):
+                })
+                vdefs.append((vdef, captured))
+
+            if not batch_rows:
+                continue
+
+            payload = {
+                "subject_id": sid,
+                "testcode_to_procedure": self._map,
+                "visits": batch_rows,
+            }
+            result = self._llm.json_completion(system=_PROMPT, user=json.dumps(payload))
+
+            # Match response entries back to the vdefs by position OR by visit_id.
+            visit_results = result.get("visits", [])
+            by_id = {entry.get("visit_id"): entry for entry in visit_results}
+
+            for vdef, captured in vdefs:
+                entry = by_id.get(vdef.visit_id)
+                if entry is None:
+                    continue
+                for proc in entry.get("missing", []):
                     findings.append(Finding(
                         analyzer="completeness",
                         severity="major",
                         subject_id=sid,
                         summary=f"Subject {sid} {vdef.visit_id} missing required: {proc}",
-                        detail=result.get("reasoning", ""),
+                        detail=entry.get("reasoning", ""),
                         protocol_citation=f"Schedule of Assessments, visit {vdef.visit_id}",
                         data_citation={
                             "domain": "VS", "usubjid": sid,

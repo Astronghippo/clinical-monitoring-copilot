@@ -71,7 +71,13 @@ class LLMClient:
         anthropic_client: Any | None = None,
         model: str | None = None,
     ) -> None:
-        self._client = anthropic_client or Anthropic(api_key=settings.anthropic_api_key)
+        # max_retries=8 so rate-limit bursts (429s) are tolerated silently via
+        # the SDK's exponential backoff. Default is 2, which isn't enough when
+        # analyzers fire many requests in rapid succession.
+        self._client = anthropic_client or Anthropic(
+            api_key=settings.anthropic_api_key,
+            max_retries=8,
+        )
         self._model = model or settings.claude_model
 
     def _call(self, *, system: str, user: str, max_tokens: int) -> str:
