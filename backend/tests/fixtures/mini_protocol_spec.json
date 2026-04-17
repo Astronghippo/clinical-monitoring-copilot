@@ -1,0 +1,15 @@
+{
+  "study_id": "ACME-DM2-302",
+  "visits": [
+    {"visit_id": "V1", "name": "Baseline", "nominal_day": 0, "window_minus_days": 0, "window_plus_days": 0, "required_procedures": ["Vitals", "Labs", "ECG"]},
+    {"visit_id": "V2", "name": "Week 2", "nominal_day": 14, "window_minus_days": 2, "window_plus_days": 2, "required_procedures": ["Vitals", "Labs"]},
+    {"visit_id": "V3", "name": "Week 4", "nominal_day": 28, "window_minus_days": 3, "window_plus_days": 3, "required_procedures": ["Vitals", "Labs", "ECG"]}
+  ],
+  "eligibility": [
+    {"criterion_id": "I1", "kind": "inclusion", "text": "Adults 18-75 with type 2 diabetes.", "structured_check": null},
+    {"criterion_id": "I2", "kind": "inclusion", "text": "HbA1c between 7.0% and 10.5% at screening.", "structured_check": null},
+    {"criterion_id": "E1", "kind": "exclusion", "text": "Pregnancy or plans to become pregnant.", "structured_check": null},
+    {"criterion_id": "E2", "kind": "exclusion", "text": "HbA1c > 10.5% at screening.", "structured_check": null}
+  ],
+  "source_pages": {"visits": [1], "eligibility": [1]}
+}
