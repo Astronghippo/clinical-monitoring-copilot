@@ -10,6 +10,9 @@ from app.config import settings
 
 # Strips a leading ```json or ``` fence and a trailing ``` fence.
 _FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.MULTILINE)
+# Finds the first {...} object OR [...] array in a string (greedy to the last brace).
+# Claude sometimes emits "Here is the JSON: {...}" despite instructions — this rescues it.
+_JSON_BLOCK = re.compile(r"(\{.*\}|\[.*\])", re.DOTALL)
 
 
 class LLMClient:
@@ -42,7 +45,15 @@ class LLMClient:
         )
         text = msg.content[0].text
         cleaned = _FENCE.sub("", text).strip()
-        return json.loads(cleaned)
+        try:
+            return json.loads(cleaned)
+        except json.JSONDecodeError:
+            # Fallback: Claude wrapped the JSON in prose (e.g. "Here is the result: {...}").
+            # Extract the first JSON object/array and try again.
+            match = _JSON_BLOCK.search(cleaned)
+            if match is None:
+                raise
+            return json.loads(match.group(1))
 
     def text_completion(
         self,

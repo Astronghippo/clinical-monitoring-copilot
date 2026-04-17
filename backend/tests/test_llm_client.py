@@ -37,3 +37,20 @@ def test_text_completion_returns_raw_text():
     fake = FakeClient("Hello, Claude.")
     llm = LLMClient(anthropic_client=fake, model="claude-sonnet-4-6")
     assert llm.text_completion(system="x", user="y") == "Hello, Claude."
+
+
+def test_json_completion_extracts_from_prose_wrapper():
+    # Claude sometimes ignores "no prose" instructions and wraps output.
+    fake = FakeClient(
+        'Sure, here is the result based on the protocol:\n{"missing": ["ECG"], "reasoning": "no ECG captured"}\n\nLet me know if you need more detail.'
+    )
+    llm = LLMClient(anthropic_client=fake, model="claude-sonnet-4-6")
+    out = llm.json_completion(system="x", user="y")
+    assert out == {"missing": ["ECG"], "reasoning": "no ECG captured"}
+
+
+def test_json_completion_extracts_array_from_prose():
+    fake = FakeClient('Here you go: [{"a": 1}, {"a": 2}] — hope that helps!')
+    llm = LLMClient(anthropic_client=fake, model="claude-sonnet-4-6")
+    out = llm.json_completion(system="x", user="y")
+    assert out == [{"a": 1}, {"a": 2}]
