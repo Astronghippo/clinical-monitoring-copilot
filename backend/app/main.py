@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
+from app.routes import analyses, datasets, protocols
 
 app = FastAPI(title="Clinical Monitoring Copilot")
 
@@ -16,3 +17,8 @@ app.add_middleware(
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+app.include_router(protocols.router)
+app.include_router(datasets.router)
+app.include_router(analyses.router)

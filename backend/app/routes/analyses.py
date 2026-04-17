@@ -1,0 +1,103 @@
+from __future__ import annotations
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from app.db import SessionLocal, get_db
+from app.models import Analysis, Dataset, FindingRow, Protocol
+from app.schemas import AnalysisOut
+from app.services.analyzers.completeness import CompletenessAnalyzer
+from app.services.analyzers.eligibility import EligibilityAnalyzer
+from app.services.analyzers.visit_windows import VisitWindowAnalyzer
+from app.services.dataset_loader import load_dataset
+from app.services.protocol_parser import ProtocolSpec
+
+
+router = APIRouter(prefix="/analyses", tags=["analyses"])
+
+
+class RunRequest(BaseModel):
+    protocol_id: int
+    dataset_id: int
+
+
+def _run_analysis(analysis_id: int) -> None:
+    """Background worker: load spec + dataset, run all analyzers, persist findings."""
+    db = SessionLocal()
+    try:
+        a = db.get(Analysis, analysis_id)
+        if a is None:
+            return
+        a.status = "running"
+        db.commit()
+        try:
+            p = db.get(Protocol, a.protocol_id)
+            d = db.get(Dataset, a.dataset_id)
+            assert p is not None and d is not None
+            spec = ProtocolSpec.model_validate(p.spec_json)
+            dataset = load_dataset(d.storage_path)
+            for analyzer in (
+                VisitWindowAnalyzer(),
+                CompletenessAnalyzer(),
+                EligibilityAnalyzer(),
+            ):
+                for f in analyzer.run(spec=spec, dataset=dataset):
+                    db.add(FindingRow(
+                        analysis_id=a.id,
+                        analyzer=f.analyzer,
+                        severity=f.severity,
+                        subject_id=f.subject_id,
+                        summary=f.summary,
+                        detail=f.detail,
+                        protocol_citation=f.protocol_citation,
+                        data_citation=f.data_citation,
+                        confidence=f.confidence,
+                    ))
+            a.status = "done"
+        except Exception as e:  # noqa: BLE001 — surface any analyzer/loader error to the UI
+            a.status = "error"
+            db.add(FindingRow(
+                analysis_id=a.id,
+                analyzer="visit_windows",
+                severity="critical",
+                subject_id="-",
+                summary=f"Analysis failed: {type(e).__name__}",
+                detail=str(e),
+                protocol_citation="-",
+                data_citation={},
+                confidence=0.0,
+            ))
+        db.commit()
+    finally:
+        db.close()
+
+
+@router.post("", response_model=AnalysisOut)
+def create_analysis(
+    req: RunRequest,
+    bg: BackgroundTasks,
+    db: Session = Depends(get_db),
+) -> Analysis:
+    if db.get(Protocol, req.protocol_id) is None:
+        raise HTTPException(404, "Protocol not found")
+    if db.get(Dataset, req.dataset_id) is None:
+        raise HTTPException(404, "Dataset not found")
+    a = Analysis(
+        protocol_id=req.protocol_id,
+        dataset_id=req.dataset_id,
+        status="pending",
+    )
+    db.add(a)
+    db.commit()
+    db.refresh(a)
+    bg.add_task(_run_analysis, a.id)
+    return a
+
+
+@router.get("/{analysis_id}", response_model=AnalysisOut)
+def get_analysis(analysis_id: int, db: Session = Depends(get_db)) -> Analysis:
+    a = db.get(Analysis, analysis_id)
+    if a is None:
+        raise HTTPException(404, "Not found")
+    return a
