@@ -1,3 +1,12 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Indeterminate progress bar: a narrow band that slides left→right repeatedly. */
+@keyframes progress-slide {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+.animate-progress-slide {
+  animation: progress-slide 1.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}

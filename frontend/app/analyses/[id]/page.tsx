@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import type { Analysis, Finding } from "@/lib/types";
 import { FindingsTable } from "@/components/FindingsTable";
 import { FindingDetail } from "@/components/FindingDetail";
+import { ProgressIndicator } from "@/components/ProgressIndicator";
 
 export default function AnalysisPage() {
   const params = useParams<{ id: string }>();
@@ -36,6 +37,12 @@ export default function AnalysisPage() {
     minor: analysis.findings.filter((f) => f.severity === "minor").length,
   };
 
+  const inProgress =
+    analysis.status === "pending" || analysis.status === "running";
+  const hasErrorFinding = analysis.findings.some(
+    (f) => f.subject_id === "-" && f.severity === "critical",
+  );
+
   return (
     <main className="space-y-6">
       <Link
@@ -44,6 +51,7 @@ export default function AnalysisPage() {
       >
         ← Run new analysis
       </Link>
+
       <header className="flex items-end justify-between">
         <div>
           <h1 className="text-2xl font-bold">Analysis #{analysis.id}</h1>
@@ -51,20 +59,36 @@ export default function AnalysisPage() {
             Status: <b>{analysis.status}</b>
           </p>
         </div>
-        <div className="flex gap-2 text-sm">
-          <span className="rounded bg-red-100 px-2 py-1 text-red-800">
-            Critical: {counts.critical}
-          </span>
-          <span className="rounded bg-amber-100 px-2 py-1 text-amber-800">
-            Major: {counts.major}
-          </span>
-          <span className="rounded bg-slate-100 px-2 py-1 text-slate-700">
-            Minor: {counts.minor}
-          </span>
-        </div>
+        {!inProgress && (
+          <div className="flex gap-2 text-sm">
+            <span className="rounded bg-red-100 px-2 py-1 text-red-800">
+              Critical: {counts.critical}
+            </span>
+            <span className="rounded bg-amber-100 px-2 py-1 text-amber-800">
+              Major: {counts.major}
+            </span>
+            <span className="rounded bg-slate-100 px-2 py-1 text-slate-700">
+              Minor: {counts.minor}
+            </span>
+          </div>
+        )}
       </header>
 
-      <FindingsTable findings={analysis.findings} onSelect={setSelected} />
+      {inProgress ? (
+        <ProgressIndicator
+          status={analysis.status}
+          startedAt={analysis.created_at}
+        />
+      ) : (
+        <>
+          {analysis.status === "error" && !hasErrorFinding && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+              Analysis finished with errors — see the critical row below for details.
+            </div>
+          )}
+          <FindingsTable findings={analysis.findings} onSelect={setSelected} />
+        </>
+      )}
 
       {selected && (
         <FindingDetail finding={selected} onClose={() => setSelected(null)} />

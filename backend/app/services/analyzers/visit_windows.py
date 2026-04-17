@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 
 from app.services.analyzers.base import Finding
-from app.services.dataset_loader import PatientDataset
+from app.services.dataset_loader import PatientDataset, normalize_visit_name
 from app.services.protocol_parser import ProtocolSpec, VisitDef
 
 
@@ -30,22 +30,24 @@ class VisitWindowAnalyzer:
 
     def run(self, *, spec: ProtocolSpec, dataset: PatientDataset) -> list[Finding]:
         findings: list[Finding] = []
-        by_name = {v.name: v for v in spec.visits}
+        # Fuzzy visit matching: normalize keys so case/whitespace differences match.
+        by_name = {normalize_visit_name(v.name): v for v in spec.visits}
         baseline = next((v for v in spec.visits if v.nominal_day == 0), None)
         if baseline is None:
             return findings
+        baseline_norm = normalize_visit_name(baseline.name)
 
         for sid in dataset.subjects():
             visits = dataset.visits_for(sid)
             if visits.empty:
                 continue
-            base_row = visits[visits["VISIT"] == baseline.name]
+            base_row = visits[visits["VISIT"].map(normalize_visit_name) == baseline_norm]
             if base_row.empty:
                 continue
             base_date = _parse_date(base_row.iloc[0]["SVSTDTC"])
 
             for _, row in visits.iterrows():
-                vdef: VisitDef | None = by_name.get(row["VISIT"])
+                vdef: VisitDef | None = by_name.get(normalize_visit_name(row["VISIT"]))
                 if not vdef or vdef.visit_id == baseline.visit_id:
                     continue
                 actual = _parse_date(row["SVSTDTC"])
