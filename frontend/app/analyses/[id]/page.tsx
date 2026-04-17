@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import type { Analysis, Finding } from "@/lib/types";
 import { FindingsTable } from "@/components/FindingsTable";
@@ -37,6 +38,12 @@ export default function AnalysisPage() {
 
   return (
     <main className="space-y-6">
+      <Link
+        href="/"
+        className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900"
+      >
+        ← Run new analysis
+      </Link>
       <header className="flex items-end justify-between">
         <div>
           <h1 className="text-2xl font-bold">Analysis #{analysis.id}</h1>
