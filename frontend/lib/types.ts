@@ -43,12 +43,29 @@ export interface ProtocolSpec {
   eligibility: EligibilityCriterion[];
 }
 
+export interface ProtocolOverview {
+  study_id: string | null;
+  title: string | null;
+  short_description: string | null;
+  phase: string | null;
+  indication: string | null;
+  sponsor: string | null;
+  design: string | null;
+  arms: string[];
+  primary_endpoint: string | null;
+  secondary_endpoints: string[];
+  treatment_duration: string | null;
+  sample_size: number | null;
+  notable_aspects: string | null;
+}
+
 export interface Protocol {
   id: number;
   study_id: string;
   filename: string;
   created_at: string;
   spec_json?: ProtocolSpec | null;
+  summary_json?: ProtocolOverview | null;
   parse_status: "parsing" | "done" | "error";
   parse_error?: string | null;
 }

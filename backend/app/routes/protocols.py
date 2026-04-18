@@ -17,13 +17,23 @@ from app.services.protocol_parser import (
     extract_text_from_pdf_bytes,
     parse_protocol_text,
 )
+from app.services.protocol_summary import summarize_protocol_text
 
 
 router = APIRouter(prefix="/protocols", tags=["protocols"])
 
 
 def _parse_in_background(protocol_id: int) -> None:
-    """Background task: call Claude to build ProtocolSpec, persist the result."""
+    """Background task: call Claude to build ProtocolSpec + narrative summary.
+
+    Two Claude calls in sequence (not parallel, for rate-limit friendliness):
+    1. spec extraction (visits + eligibility) — structured data for analyzers
+    2. summary extraction (title, phase, endpoints, etc.) — narrative overview
+
+    If the spec call succeeds but summary fails, we still mark parse_status=done
+    and leave summary_json=None (the frontend will simply not render the
+    overview card). If spec fails, the whole parse is flagged as error.
+    """
     db = SessionLocal()
     try:
         p = db.get(Protocol, protocol_id)
@@ -33,9 +43,16 @@ def _parse_in_background(protocol_id: int) -> None:
             spec = parse_protocol_text(p.raw_text)
             p.study_id = spec.study_id or "(unknown)"
             p.spec_json = spec.model_dump()
+
+            # Best-effort summary — doesn't fail the parse if it errors.
+            try:
+                p.summary_json = summarize_protocol_text(p.raw_text)
+            except Exception:  # noqa: BLE001
+                p.summary_json = None
+
             p.parse_status = "done"
             p.parse_error = None
-        except Exception as e:  # noqa: BLE001 — surface any parse error to the UI
+        except Exception as e:  # noqa: BLE001 — surface any spec-parse error to UI
             p.parse_status = "error"
             p.parse_error = f"{type(e).__name__}: {e}"
         db.commit()

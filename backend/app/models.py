@@ -18,6 +18,10 @@ class Protocol(Base):
     # after the upload responds, since Claude parsing can take 30-60s on
     # large protocols.
     spec_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # High-level human-readable context (title, phase, indication, arms,
+    # endpoints, notable aspects). Complementary to spec_json. Populated in
+    # the same background task.
+    summary_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     parse_status: Mapped[str] = mapped_column(String(16), default="parsing")
     parse_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

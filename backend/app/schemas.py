@@ -38,6 +38,9 @@ class ProtocolOut(BaseModel):
     # Parsed ProtocolSpec (visits + eligibility). Filled asynchronously by a
     # background task; until parse_status == "done", spec_json is None.
     spec_json: dict | None = None
+    # High-level human-readable summary (title, phase, indication, etc.).
+    # Filled by the same background task as spec_json.
+    summary_json: dict | None = None
     parse_status: str = "done"  # "parsing" | "done" | "error"
     parse_error: str | None = None
 

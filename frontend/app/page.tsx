@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ProtocolUploader } from "@/components/ProtocolUploader";
 import { ProtocolSummary } from "@/components/ProtocolSummary";
+import { ProtocolOverviewCard } from "@/components/ProtocolOverviewCard";
 import { DatasetUploader } from "@/components/DatasetUploader";
 import { RunAnalysisButton } from "@/components/RunAnalysisButton";
 import type { Protocol, Dataset } from "@/lib/types";
@@ -26,6 +27,9 @@ export default function Home() {
           <p className="text-sm text-slate-700">
             Protocol loaded: <b>{protocol.study_id}</b>
           </p>
+          {protocol.summary_json && (
+            <ProtocolOverviewCard overview={protocol.summary_json} />
+          )}
           {protocol.spec_json && <ProtocolSummary spec={protocol.spec_json} />}
         </>
       )}

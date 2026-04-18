@@ -18,6 +18,7 @@ from app import models  # noqa: F401  — register ORM classes
 _PG_ADDITIVE_PATCHES: list[tuple[str, str]] = [
     ("protocols", "parse_status VARCHAR(16) DEFAULT 'done'"),
     ("protocols", "parse_error TEXT"),
+    ("protocols", "summary_json JSONB"),
 ]
 
 
