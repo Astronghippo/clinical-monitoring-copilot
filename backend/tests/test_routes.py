@@ -41,17 +41,24 @@ def client_with_sqlite():
             finally:
                 db.close()
 
-        # Patch SessionLocal used by the background task too
+        # Patch SessionLocal in every route module that has a background task
+        # using it (otherwise the background task writes to the prod SessionLocal).
         import app.routes.analyses as analyses_mod
-        original_session_local = analyses_mod.SessionLocal
-        analyses_mod.SessionLocal = TestSession
+        import app.routes.protocols as protocols_mod
+        originals = {
+            analyses_mod: analyses_mod.SessionLocal,
+            protocols_mod: protocols_mod.SessionLocal,
+        }
+        for mod in originals:
+            mod.SessionLocal = TestSession
         app.dependency_overrides[get_db] = _override_db
 
         client = TestClient(app)
         try:
             yield client
         finally:
-            analyses_mod.SessionLocal = original_session_local
+            for mod, orig in originals.items():
+                mod.SessionLocal = orig
             app.dependency_overrides.clear()
     finally:
         import os

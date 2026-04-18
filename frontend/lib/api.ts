@@ -13,6 +13,8 @@ export const api = {
     fd.append("file", file);
     return json(await fetch(`${BASE}/protocols`, { method: "POST", body: fd }));
   },
+  getProtocol: async (id: number): Promise<Protocol> =>
+    json(await fetch(`${BASE}/protocols/${id}`)),
   uploadDataset: async (name: string, files: File[]): Promise<Dataset> => {
     const fd = new FormData();
     for (const f of files) fd.append("files", f);

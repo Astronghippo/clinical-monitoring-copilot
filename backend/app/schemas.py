@@ -35,9 +35,11 @@ class ProtocolOut(BaseModel):
     study_id: str
     filename: str
     created_at: datetime
-    # Parsed ProtocolSpec (visits + eligibility). Allows the frontend to render
-    # a preview of what Claude extracted before the user runs analysis.
+    # Parsed ProtocolSpec (visits + eligibility). Filled asynchronously by a
+    # background task; until parse_status == "done", spec_json is None.
     spec_json: dict | None = None
+    parse_status: str = "done"  # "parsing" | "done" | "error"
+    parse_error: str | None = None
 
 
 class DatasetOut(BaseModel):

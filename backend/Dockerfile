@@ -22,6 +22,6 @@ COPY . .
 ENV PORT=8000
 EXPOSE 8000
 
-# On startup: create DB tables if missing, then launch uvicorn.
+# On startup: create/patch DB schema, then launch uvicorn.
 # (Prototype shortcut — production would use alembic upgrade head.)
-CMD ["sh", "-c", "python -c 'from app.db import Base, engine; from app import models; Base.metadata.create_all(engine)' && uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
+CMD ["sh", "-c", "python -c 'from app.startup import ensure_schema; ensure_schema()' && uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]

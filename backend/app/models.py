@@ -11,10 +11,15 @@ from app.db import Base
 class Protocol(Base):
     __tablename__ = "protocols"
     id: Mapped[int] = mapped_column(primary_key=True)
-    study_id: Mapped[str] = mapped_column(String(64))
+    study_id: Mapped[str] = mapped_column(String(64), default="(parsing)")
     filename: Mapped[str] = mapped_column(String(255))
-    raw_text: Mapped[str] = mapped_column(Text)
-    spec_json: Mapped[dict] = mapped_column(JSON)
+    raw_text: Mapped[str] = mapped_column(Text, default="")
+    # Nullable: spec_json is populated asynchronously by a background task
+    # after the upload responds, since Claude parsing can take 30-60s on
+    # large protocols.
+    spec_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    parse_status: Mapped[str] = mapped_column(String(16), default="parsing")
+    parse_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 

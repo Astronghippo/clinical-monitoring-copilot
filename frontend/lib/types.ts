@@ -49,6 +49,8 @@ export interface Protocol {
   filename: string;
   created_at: string;
   spec_json?: ProtocolSpec | null;
+  parse_status: "parsing" | "done" | "error";
+  parse_error?: string | null;
 }
 
 export interface Dataset {
