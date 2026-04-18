@@ -10,6 +10,11 @@ import { FindingsFilterBar } from "@/components/FindingsFilterBar";
 import { ProgressIndicator } from "@/components/ProgressIndicator";
 
 function downloadCsv(findings: Finding[], analysisId: number) {
+  const escape = (v: unknown) => {
+    const s = v === null || v === undefined ? "" : String(v);
+    // RFC 4180: wrap in quotes, escape embedded quotes by doubling them.
+    return `"${s.replace(/"/g, '""')}"`;
+  };
   const headers = [
     "id",
     "analyzer",
@@ -20,14 +25,20 @@ function downloadCsv(findings: Finding[], analysisId: number) {
     "protocol_citation",
     "confidence",
   ];
-  const escape = (v: unknown) => {
-    const s = v === null || v === undefined ? "" : String(v);
-    // RFC 4180: wrap in quotes, escape embedded quotes by doubling them.
-    return `"${s.replace(/"/g, '""')}"`;
-  };
   const lines = [headers.join(",")];
   for (const f of findings) {
-    lines.push(headers.map((h) => escape((f as Record<string, unknown>)[h])).join(","));
+    lines.push(
+      [
+        escape(f.id),
+        escape(f.analyzer),
+        escape(f.severity),
+        escape(f.subject_id),
+        escape(f.summary),
+        escape(f.detail),
+        escape(f.protocol_citation),
+        escape(f.confidence),
+      ].join(","),
+    );
   }
   const csv = lines.join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
