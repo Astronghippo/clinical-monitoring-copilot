@@ -41,7 +41,10 @@ def summarize_protocol_text(text: str, *, llm: LLMClient | None = None) -> dict[
     """
     llm = llm or LLMClient()
     prompt_text = summary_excerpt(text)
-    raw = llm.json_completion(system=_PROMPT, user=prompt_text)
+    # 6000 is enough for the full narrative JSON shape (title, design, arms,
+    # endpoints, notable_aspects, etc.) with headroom for verbose free-text
+    # fields on oncology protocols.
+    raw = llm.json_completion(system=_PROMPT, user=prompt_text, max_tokens=6000)
 
     # Normalize the shape defensively (LLM might omit fields).
     def _get(key, default=None):

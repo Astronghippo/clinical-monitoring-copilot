@@ -67,8 +67,10 @@ class EligibilityAnalyzer:
                     for sid in chunk
                 ],
             }
+            # max_tokens=8000: one batch call covers 20 subjects × many
+            # criteria; violations + reasoning can be verbose on oncology I/E.
             result = self._llm.json_completion(
-                system=_PROMPT, user=json.dumps(payload, default=str)
+                system=_PROMPT, user=json.dumps(payload, default=str), max_tokens=8000,
             )
 
             # Map results back to findings. Tolerate missing entries (subject might

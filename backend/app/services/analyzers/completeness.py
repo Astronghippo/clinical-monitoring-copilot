@@ -91,7 +91,11 @@ class CompletenessAnalyzer:
                 "testcode_to_procedure": self._map,
                 "visits": batch_rows,
             }
-            result = self._llm.json_completion(system=_PROMPT, user=json.dumps(payload))
+            # max_tokens=8000: one per-subject call can cover 10+ visits;
+            # each visit returns up to ~100 tokens of reasoning/missing list.
+            result = self._llm.json_completion(
+                system=_PROMPT, user=json.dumps(payload), max_tokens=8000,
+            )
 
             # Match response entries back to the vdefs by position OR by visit_id.
             visit_results = result.get("visits", [])

@@ -121,10 +121,14 @@ def parse_protocol_text(text: str, *, llm: LLMClient | None = None) -> ProtocolS
     For large protocols (> _MAX_FULL_CHARS) we excerpt only the sections
     likely to contain visit schedule + eligibility criteria, to stay under
     per-minute input-token rate limits.
+
+    max_tokens=16000: real oncology / Phase III protocols can have 10-20+
+    visits and 25-40 eligibility criteria — the JSON output regularly needs
+    5000+ tokens. The 4096 default was truncating mid-value.
     """
     llm = llm or LLMClient()
     prompt_text = (
         extract_relevant_excerpt(text) if len(text) > _MAX_FULL_CHARS else text
     )
-    raw = llm.json_completion(system=_PROMPT, user=prompt_text)
+    raw = llm.json_completion(system=_PROMPT, user=prompt_text, max_tokens=16000)
     return ProtocolSpec.model_validate(raw)
