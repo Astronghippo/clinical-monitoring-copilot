@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from app.db import SessionLocal, get_db
 from app.models import Analysis, Dataset, FindingRow, Protocol
-from app.schemas import AnalysisOut, AnalysisSummary
+from app.schemas import AnalysisOut, AnalysisRename, AnalysisSummary
 from app.services.analyzers.completeness import CompletenessAnalyzer
 from app.services.analyzers.eligibility import EligibilityAnalyzer
 from app.services.analyzers.visit_windows import VisitWindowAnalyzer
@@ -106,6 +106,24 @@ def get_analysis(analysis_id: int, db: Session = Depends(get_db)) -> Analysis:
     return a
 
 
+@router.patch("/{analysis_id}", response_model=AnalysisOut)
+def rename_analysis(
+    analysis_id: int,
+    body: AnalysisRename,
+    db: Session = Depends(get_db),
+) -> Analysis:
+    """Update the user-editable display name. Empty/null clears the name."""
+    a = db.get(Analysis, analysis_id)
+    if a is None:
+        raise HTTPException(404, "Not found")
+    # Normalize empty strings to None so the frontend can fall back to "Analysis #N".
+    name = (body.name or "").strip() or None
+    a.name = name
+    db.commit()
+    db.refresh(a)
+    return a
+
+
 @router.get("", response_model=list[AnalysisSummary])
 def list_analyses(
     limit: int = 50,
@@ -153,6 +171,7 @@ def list_analyses(
                 protocol_id=a.protocol_id,
                 dataset_id=a.dataset_id,
                 status=a.status,
+                name=a.name,
                 created_at=a.created_at,
                 study_id=protos.get(a.protocol_id),
                 finding_count=total,

@@ -19,6 +19,7 @@ _PG_ADDITIVE_PATCHES: list[tuple[str, str]] = [
     ("protocols", "parse_status VARCHAR(16) DEFAULT 'done'"),
     ("protocols", "parse_error TEXT"),
     ("protocols", "summary_json JSONB"),
+    ("analyses", "name VARCHAR(255)"),
 ]
 
 

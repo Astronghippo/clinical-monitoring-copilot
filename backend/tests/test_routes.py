@@ -141,6 +141,54 @@ def test_list_analyses_returns_empty_when_none(client_with_sqlite):
     assert r.json() == []
 
 
+def test_rename_analysis_updates_name_and_clears_on_empty(client_with_sqlite):
+    """PATCH /analyses/{id} sets a custom display name; empty string clears it."""
+    client = client_with_sqlite
+    # Seed one analysis via the API.
+    with patch("app.routes.protocols.parse_protocol_text") as mp, \
+         patch("app.routes.protocols.extract_text_from_pdf_bytes", return_value="fake"):
+        mp.return_value = ProtocolSpec.model_validate(_fake_spec_dict())
+        r = client.post("/protocols", files={"file": ("x.pdf", b"%PDF-1.4", "application/pdf")})
+        protocol_id = r.json()["id"]
+    dm = (FIX / "mini_dataset" / "dm.csv").read_bytes()
+    sv = (FIX / "mini_dataset" / "sv.csv").read_bytes()
+    vs = (FIX / "mini_dataset" / "vs.csv").read_bytes()
+    r = client.post("/datasets?name=mini", files=[
+        ("files", ("dm.csv", dm, "text/csv")),
+        ("files", ("sv.csv", sv, "text/csv")),
+        ("files", ("vs.csv", vs, "text/csv")),
+    ])
+    dataset_id = r.json()["id"]
+    with patch("app.services.analyzers.completeness.LLMClient") as MC, \
+         patch("app.services.analyzers.eligibility.LLMClient") as ME:
+        MC.return_value.json_completion.return_value = {"results": []}
+        ME.return_value.json_completion.return_value = {"results": []}
+        r = client.post("/analyses", json={"protocol_id": protocol_id, "dataset_id": dataset_id})
+        analysis_id = r.json()["id"]
+
+    # Initially no name.
+    assert r.json()["name"] is None
+
+    # Rename to something custom.
+    r = client.patch(f"/analyses/{analysis_id}", json={"name": "Q2 pilot run"})
+    assert r.status_code == 200
+    assert r.json()["name"] == "Q2 pilot run"
+
+    # GET reflects the change.
+    r = client.get(f"/analyses/{analysis_id}")
+    assert r.json()["name"] == "Q2 pilot run"
+
+    # Clearing via empty string reverts to null.
+    r = client.patch(f"/analyses/{analysis_id}", json={"name": "   "})
+    assert r.status_code == 200
+    assert r.json()["name"] is None
+
+
+def test_rename_analysis_404_when_missing(client_with_sqlite):
+    r = client_with_sqlite.patch("/analyses/99999", json={"name": "x"})
+    assert r.status_code == 404
+
+
 def test_list_analyses_returns_summaries_with_counts(client_with_sqlite):
     """List endpoint returns newest-first with per-severity counts + study_id."""
     client = client_with_sqlite

@@ -41,6 +41,9 @@ class Analysis(Base):
     protocol_id: Mapped[int] = mapped_column(ForeignKey("protocols.id"))
     dataset_id: Mapped[int] = mapped_column(ForeignKey("datasets.id"))
     status: Mapped[str] = mapped_column(String(16), default="pending")
+    # User-editable display name. When null, frontend renders "Analysis #N"
+    # using the auto-generated id. Lets users label past pulls meaningfully.
+    name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     findings: Mapped[list["FindingRow"]] = relationship(
         back_populates="analysis", cascade="all, delete-orphan"

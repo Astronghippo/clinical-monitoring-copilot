@@ -25,6 +25,7 @@ class AnalysisOut(BaseModel):
     protocol_id: int
     dataset_id: int
     status: str
+    name: str | None = None  # user-editable display name
     created_at: datetime
     findings: list[FindingOut] = []
 
@@ -36,10 +37,16 @@ class AnalysisSummary(BaseModel):
     protocol_id: int
     dataset_id: int
     status: str
+    name: str | None = None
     created_at: datetime
     study_id: str | None = None
     finding_count: int = 0
     counts: dict[str, int] = {}  # {"critical": N, "major": N, "minor": N}
+
+
+class AnalysisRename(BaseModel):
+    """Payload for renaming an analysis. null/empty clears the custom name."""
+    name: str | None = None
 
 
 class ProtocolOut(BaseModel):

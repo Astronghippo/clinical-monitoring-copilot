@@ -79,7 +79,7 @@ export default function AnalysisListPage() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left text-slate-600">
               <tr>
-                <th className="px-3 py-2">#</th>
+                <th className="px-3 py-2">Name</th>
                 <th className="px-3 py-2">Started</th>
                 <th className="px-3 py-2">Protocol</th>
                 <th className="px-3 py-2">Status</th>
@@ -95,9 +95,18 @@ export default function AnalysisListPage() {
                   <td className="px-3 py-2">
                     <Link
                       href={`/analyses/${a.id}`}
-                      className="font-mono text-slate-700 hover:text-slate-900 hover:underline"
+                      className="text-slate-700 hover:text-slate-900 hover:underline"
                     >
-                      #{a.id}
+                      {a.name ? (
+                        <>
+                          <span className="font-medium">{a.name}</span>
+                          <span className="ml-2 font-mono text-xs text-slate-400">
+                            #{a.id}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="font-mono">Analysis #{a.id}</span>
+                      )}
                     </Link>
                   </td>
                   <td className="px-3 py-2 text-slate-600">

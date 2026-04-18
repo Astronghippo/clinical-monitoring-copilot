@@ -18,6 +18,7 @@ export interface Analysis {
   protocol_id: number;
   dataset_id: number;
   status: "pending" | "running" | "done" | "error";
+  name: string | null;
   created_at: string;
   findings: Finding[];
 }
@@ -27,6 +28,7 @@ export interface AnalysisSummary {
   protocol_id: number;
   dataset_id: number;
   status: "pending" | "running" | "done" | "error";
+  name: string | null;
   created_at: string;
   study_id: string | null;
   finding_count: number;

@@ -43,6 +43,14 @@ export const api = {
     json(await fetch(`${BASE}/analyses/${id}`)),
   listAnalyses: async (): Promise<AnalysisSummary[]> =>
     json(await fetch(`${BASE}/analyses`)),
+  renameAnalysis: async (id: number, name: string | null): Promise<Analysis> =>
+    json(
+      await fetch(`${BASE}/analyses/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      }),
+    ),
   draftQueryLetter: async (findingId: number): Promise<QueryLetter> =>
     json(
       await fetch(`${BASE}/findings/${findingId}/query-letter`, {

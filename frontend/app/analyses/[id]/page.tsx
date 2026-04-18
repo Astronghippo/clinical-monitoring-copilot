@@ -8,6 +8,7 @@ import { FindingsTable } from "@/components/FindingsTable";
 import { FindingDetail } from "@/components/FindingDetail";
 import { FindingsFilterBar } from "@/components/FindingsFilterBar";
 import { ProgressIndicator } from "@/components/ProgressIndicator";
+import { EditableHeading } from "@/components/EditableHeading";
 
 function downloadCsv(findings: Finding[], analysisId: number) {
   const escape = (v: unknown) => {
@@ -148,7 +149,17 @@ export default function AnalysisPage() {
 
       <header className="flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Analysis #{analysis.id}</h1>
+          <EditableHeading
+            value={analysis.name}
+            fallback={`Analysis #${analysis.id}`}
+            onSave={async (next) => {
+              const updated = await api.renameAnalysis(analysis.id, next);
+              // Keep findings that we already polled — only refresh metadata.
+              setAnalysis((prev) =>
+                prev ? { ...prev, name: updated.name } : updated,
+              );
+            }}
+          />
           <p className="text-slate-600">
             Status: <b>{analysis.status}</b>
           </p>
