@@ -22,6 +22,17 @@ export interface Analysis {
   findings: Finding[];
 }
 
+export interface AnalysisSummary {
+  id: number;
+  protocol_id: number;
+  dataset_id: number;
+  status: "pending" | "running" | "done" | "error";
+  created_at: string;
+  study_id: string | null;
+  finding_count: number;
+  counts: { critical: number; major: number; minor: number };
+}
+
 export interface VisitDef {
   visit_id: string;
   name: string;

@@ -15,11 +15,19 @@ export default function Home() {
 
   return (
     <main className="space-y-6">
-      <header>
-        <h1 className="text-3xl font-bold">Clinical Monitoring Copilot</h1>
-        <p className="text-slate-600">
-          Upload a protocol and patient dataset to detect deviations.
-        </p>
+      <header className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Clinical Monitoring Copilot</h1>
+          <p className="text-slate-600">
+            Upload a protocol and patient dataset to detect deviations.
+          </p>
+        </div>
+        <a
+          href="/analyses"
+          className="rounded border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 shadow-sm hover:bg-slate-50"
+        >
+          Past analyses →
+        </a>
       </header>
       <ProtocolUploader onUploaded={setProtocol} />
       {protocol && (

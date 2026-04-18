@@ -4,9 +4,12 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from sqlalchemy import func
+from sqlalchemy.orm import selectinload
+
 from app.db import SessionLocal, get_db
 from app.models import Analysis, Dataset, FindingRow, Protocol
-from app.schemas import AnalysisOut
+from app.schemas import AnalysisOut, AnalysisSummary
 from app.services.analyzers.completeness import CompletenessAnalyzer
 from app.services.analyzers.eligibility import EligibilityAnalyzer
 from app.services.analyzers.visit_windows import VisitWindowAnalyzer
@@ -101,3 +104,61 @@ def get_analysis(analysis_id: int, db: Session = Depends(get_db)) -> Analysis:
     if a is None:
         raise HTTPException(404, "Not found")
     return a
+
+
+@router.get("", response_model=list[AnalysisSummary])
+def list_analyses(
+    limit: int = 50,
+    db: Session = Depends(get_db),
+) -> list[AnalysisSummary]:
+    """Return recent analyses newest-first with severity counts + protocol study_id.
+
+    Uses SQL aggregation for counts so we don't load thousands of FindingRow
+    objects just to count them for each analysis in the list.
+    """
+    # Aggregate severity counts per analysis in a single query.
+    sev_rows = (
+        db.query(
+            FindingRow.analysis_id,
+            FindingRow.severity,
+            func.count(FindingRow.id),
+        )
+        .group_by(FindingRow.analysis_id, FindingRow.severity)
+        .all()
+    )
+    counts_by_analysis: dict[int, dict[str, int]] = {}
+    for analysis_id, severity, n in sev_rows:
+        counts_by_analysis.setdefault(analysis_id, {})[severity] = n
+
+    analyses = (
+        db.query(Analysis)
+        .order_by(Analysis.id.desc())
+        .limit(limit)
+        .all()
+    )
+    # Resolve protocol study_id in one batched query.
+    proto_ids = {a.protocol_id for a in analyses}
+    protos = {
+        p.id: p.study_id
+        for p in db.query(Protocol).filter(Protocol.id.in_(proto_ids)).all()
+    }
+
+    summaries: list[AnalysisSummary] = []
+    for a in analyses:
+        c = counts_by_analysis.get(a.id, {})
+        total = sum(c.values())
+        summaries.append(
+            AnalysisSummary(
+                id=a.id,
+                protocol_id=a.protocol_id,
+                dataset_id=a.dataset_id,
+                status=a.status,
+                created_at=a.created_at,
+                study_id=protos.get(a.protocol_id),
+                finding_count=total,
+                counts={"critical": c.get("critical", 0),
+                        "major": c.get("major", 0),
+                        "minor": c.get("minor", 0)},
+            )
+        )
+    return summaries

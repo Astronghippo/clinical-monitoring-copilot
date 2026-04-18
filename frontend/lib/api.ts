@@ -1,4 +1,10 @@
-import type { Analysis, Dataset, Protocol, QueryLetter } from "./types";
+import type {
+  Analysis,
+  AnalysisSummary,
+  Dataset,
+  Protocol,
+  QueryLetter,
+} from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -35,6 +41,8 @@ export const api = {
     ),
   getAnalysis: async (id: number): Promise<Analysis> =>
     json(await fetch(`${BASE}/analyses/${id}`)),
+  listAnalyses: async (): Promise<AnalysisSummary[]> =>
+    json(await fetch(`${BASE}/analyses`)),
   draftQueryLetter: async (findingId: number): Promise<QueryLetter> =>
     json(
       await fetch(`${BASE}/findings/${findingId}/query-letter`, {

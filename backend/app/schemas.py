@@ -29,6 +29,19 @@ class AnalysisOut(BaseModel):
     findings: list[FindingOut] = []
 
 
+class AnalysisSummary(BaseModel):
+    """Light projection for the list/history view — no findings payload."""
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    protocol_id: int
+    dataset_id: int
+    status: str
+    created_at: datetime
+    study_id: str | None = None
+    finding_count: int = 0
+    counts: dict[str, int] = {}  # {"critical": N, "major": N, "minor": N}
+
+
 class ProtocolOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
