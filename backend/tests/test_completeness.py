@@ -45,14 +45,20 @@ class StubLLM:
         return self._responses.pop(0)
 
 
+def _single_subject_response(subject_id, visits):
+    """Helper: wrap per-subject data in the new multi-subject batch shape."""
+    return {"results": [{"subject_id": subject_id, "visits": visits}]}
+
+
 def test_no_findings_when_all_captured():
     vs = [
         ("1001", "Baseline", "SYSBP", 120, "2025-06-01"),
         ("1001", "Baseline", "HBA1C", 8.1, "2025-06-01"),
         ("1001", "Baseline", "ECGINT", 400, "2025-06-01"),
     ]
-    # Batched response: one entry per visit.
-    llm = StubLLM([{"visits": [{"visit_id": "V1", "missing": [], "reasoning": "all present"}]}])
+    llm = StubLLM([_single_subject_response(
+        "1001", [{"visit_id": "V1", "missing": [], "reasoning": "all present"}]
+    )])
     findings = CompletenessAnalyzer(llm=llm).run(spec=_spec(), dataset=_ds(vs))
     assert findings == []
 
@@ -63,11 +69,9 @@ def test_flags_missing_procedure():
         ("1001", "Baseline", "HBA1C", 8.1, "2025-06-01"),
         # Missing ECG
     ]
-    llm = StubLLM([{
-        "visits": [
-            {"visit_id": "V1", "missing": ["ECG"], "reasoning": "no ECG testcode captured"}
-        ]
-    }])
+    llm = StubLLM([_single_subject_response(
+        "1001", [{"visit_id": "V1", "missing": ["ECG"], "reasoning": "no ECG"}]
+    )])
     findings = CompletenessAnalyzer(llm=llm).run(spec=_spec(), dataset=_ds(vs))
     assert len(findings) == 1
     f = findings[0]
@@ -84,18 +88,84 @@ def test_default_testcode_map_includes_common_codes():
 
 def test_multiple_missing_produces_multiple_findings():
     vs = [("1001", "Baseline", "SYSBP", 120, "2025-06-01")]
-    llm = StubLLM([{
-        "visits": [
-            {"visit_id": "V1", "missing": ["Labs", "ECG"], "reasoning": "missing both"}
-        ]
-    }])
+    llm = StubLLM([_single_subject_response(
+        "1001", [{"visit_id": "V1", "missing": ["Labs", "ECG"], "reasoning": "two missing"}]
+    )])
     findings = CompletenessAnalyzer(llm=llm).run(spec=_spec(), dataset=_ds(vs))
     assert len(findings) == 2
     assert {f.summary.split(": ")[-1] for f in findings} == {"Labs", "ECG"}
 
 
-def test_batches_one_call_per_subject_across_multiple_visits():
-    """Single LLM call for a subject with many visits (was one per visit before)."""
+def test_batches_multiple_subjects_into_a_single_call():
+    """20 subjects should be sent in one batched LLM call, not 20 calls."""
+    spec = ProtocolSpec(
+        study_id="T1",
+        visits=[VisitDef(visit_id="V1", name="Baseline", nominal_day=0,
+                         required_procedures=["Vitals"])],
+        eligibility=[],
+    )
+    # Build 15 subjects (under batch size 20 → 1 call).
+    subjects = [f"100{i:02d}" for i in range(15)]
+    dm = pd.DataFrame([{"USUBJID": sid, "RFSTDTC": "2025-06-01"} for sid in subjects])
+    sv = pd.DataFrame([{
+        "USUBJID": sid, "VISIT": "Baseline",
+        "VISITNUM": 1, "SVSTDTC": "2025-06-01",
+    } for sid in subjects])
+    vs = pd.DataFrame([
+        (sid, "Baseline", "SYSBP", 120, "2025-06-01") for sid in subjects
+    ], columns=["USUBJID", "VISIT", "VSTESTCD", "VSORRES", "VSDTC"])
+    ds = PatientDataset(dm=dm, sv=sv, vs=vs)
+
+    # One canned response with all subjects, each visit = no missing.
+    llm = StubLLM([{
+        "results": [
+            {"subject_id": sid, "visits": [
+                {"visit_id": "V1", "missing": [], "reasoning": "ok"}
+            ]} for sid in subjects
+        ]
+    }])
+    findings = CompletenessAnalyzer(llm=llm).run(spec=spec, dataset=ds)
+    assert len(llm.calls) == 1  # 15 subjects fit in one batch
+    assert findings == []
+
+
+def test_chunks_when_subjects_exceed_batch_size():
+    """45 subjects → ceil(45/20) = 3 batched LLM calls."""
+    spec = ProtocolSpec(
+        study_id="T1",
+        visits=[VisitDef(visit_id="V1", name="Baseline", nominal_day=0,
+                         required_procedures=["Vitals"])],
+        eligibility=[],
+    )
+    subjects = [f"{1000 + i}" for i in range(45)]
+    dm = pd.DataFrame([{"USUBJID": sid, "RFSTDTC": "2025-06-01"} for sid in subjects])
+    sv = pd.DataFrame([{
+        "USUBJID": sid, "VISIT": "Baseline",
+        "VISITNUM": 1, "SVSTDTC": "2025-06-01",
+    } for sid in subjects])
+    vs = pd.DataFrame([
+        (sid, "Baseline", "SYSBP", 120, "2025-06-01") for sid in subjects
+    ], columns=["USUBJID", "VISIT", "VSTESTCD", "VSORRES", "VSDTC"])
+    ds = PatientDataset(dm=dm, sv=sv, vs=vs)
+
+    # Three responses, one per batch.
+    responses = []
+    for batch_start in (0, 20, 40):
+        batch_subjects = subjects[batch_start : batch_start + 20]
+        responses.append({
+            "results": [
+                {"subject_id": sid, "visits": [
+                    {"visit_id": "V1", "missing": [], "reasoning": "ok"}
+                ]} for sid in batch_subjects
+            ]
+        })
+    llm = StubLLM(responses)
+    CompletenessAnalyzer(llm=llm).run(spec=spec, dataset=ds)
+    assert len(llm.calls) == 3  # 45 / 20 = 3 batches
+
+
+def test_per_subject_multiple_visits_still_bundled():
+    """Within a batch, each subject can still have multiple visits."""
     spec = ProtocolSpec(
         study_id="T1",
         visits=[
@@ -103,8 +173,6 @@ def test_batches_one_call_per_subject_across_multiple_visits():
                      required_procedures=["Vitals"]),
             VisitDef(visit_id="V2", name="Week 2", nominal_day=14,
                      required_procedures=["Vitals", "Labs"]),
-            VisitDef(visit_id="V3", name="Week 4", nominal_day=28,
-                     required_procedures=["Vitals", "Labs", "ECG"]),
         ],
         eligibility=[],
     )
@@ -112,24 +180,23 @@ def test_batches_one_call_per_subject_across_multiple_visits():
     sv = pd.DataFrame([
         {"USUBJID": "1001", "VISIT": "Baseline", "VISITNUM": 1, "SVSTDTC": "2025-06-01"},
         {"USUBJID": "1001", "VISIT": "Week 2",   "VISITNUM": 2, "SVSTDTC": "2025-06-15"},
-        {"USUBJID": "1001", "VISIT": "Week 4",   "VISITNUM": 3, "SVSTDTC": "2025-06-29"},
     ])
     vs = pd.DataFrame([
         ("1001", "Baseline", "SYSBP", 120, "2025-06-01"),
-        ("1001", "Week 2",   "SYSBP", 118, "2025-06-15"),  # missing Labs
-        ("1001", "Week 4",   "SYSBP", 122, "2025-06-29"),  # missing Labs + ECG
+        ("1001", "Week 2",   "SYSBP", 118, "2025-06-15"),
     ], columns=["USUBJID", "VISIT", "VSTESTCD", "VSORRES", "VSDTC"])
     ds = PatientDataset(dm=dm, sv=sv, vs=vs)
 
     llm = StubLLM([{
-        "visits": [
-            {"visit_id": "V1", "missing": [], "reasoning": "ok"},
-            {"visit_id": "V2", "missing": ["Labs"], "reasoning": "no lab captured"},
-            {"visit_id": "V3", "missing": ["Labs", "ECG"], "reasoning": "two missing"},
-        ]
+        "results": [{
+            "subject_id": "1001",
+            "visits": [
+                {"visit_id": "V1", "missing": [], "reasoning": "ok"},
+                {"visit_id": "V2", "missing": ["Labs"], "reasoning": "no lab captured"},
+            ],
+        }]
     }])
     findings = CompletenessAnalyzer(llm=llm).run(spec=spec, dataset=ds)
-    # One LLM call total (batched across the subject's visits).
     assert len(llm.calls) == 1
-    # V2 → 1 missing; V3 → 2 missing; V1 → 0 missing. Total 3 findings.
-    assert len(findings) == 3
+    assert len(findings) == 1
+    assert "Labs" in findings[0].summary
