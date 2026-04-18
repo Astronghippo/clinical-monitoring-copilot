@@ -7,8 +7,17 @@ from app.services.dataset_loader import PatientDataset, normalize_visit_name
 from app.services.protocol_parser import ProtocolSpec, VisitDef
 
 
-def _parse_date(s: str) -> date:
-    return datetime.fromisoformat(str(s)).date()
+def _parse_date(s) -> date | None:
+    """Parse a date string tolerantly. Returns None for missing/invalid values."""
+    if s is None:
+        return None
+    ss = str(s).strip()
+    if not ss or ss.lower() in ("nan", "none", "nat"):
+        return None
+    try:
+        return datetime.fromisoformat(ss).date()
+    except (ValueError, TypeError):
+        return None
 
 
 def _severity(delta_days: int, window_minus: int, window_plus: int) -> str:
@@ -37,20 +46,26 @@ class VisitWindowAnalyzer:
             return findings
         baseline_norm = normalize_visit_name(baseline.name)
 
+        # This analyzer requires visit dates. If SVSTDTC isn't even a column
+        # (e.g., a wide-format EDC export without dates), there's nothing to do.
         for sid in dataset.subjects():
             visits = dataset.visits_for(sid)
-            if visits.empty:
+            if visits.empty or "SVSTDTC" not in visits.columns:
                 continue
             base_row = visits[visits["VISIT"].map(normalize_visit_name) == baseline_norm]
             if base_row.empty:
                 continue
             base_date = _parse_date(base_row.iloc[0]["SVSTDTC"])
+            if base_date is None:
+                continue  # baseline date unparseable — can't anchor window math
 
             for _, row in visits.iterrows():
                 vdef: VisitDef | None = by_name.get(normalize_visit_name(row["VISIT"]))
                 if not vdef or vdef.visit_id == baseline.visit_id:
                     continue
                 actual = _parse_date(row["SVSTDTC"])
+                if actual is None:
+                    continue  # no date → skip this subject-visit silently
                 actual_day = (actual - base_date).days
                 delta = actual_day - vdef.nominal_day  # positive = late
                 in_window = (-vdef.window_minus_days) <= delta <= vdef.window_plus_days

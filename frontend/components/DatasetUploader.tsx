@@ -10,7 +10,7 @@ export function DatasetUploader({ onUploaded }: { onUploaded: (d: Dataset) => vo
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="mb-2 text-lg font-semibold">2. Upload dataset (SDTM CSVs)</h2>
+      <h2 className="mb-2 text-lg font-semibold">2. Upload dataset</h2>
       <input
         className="mr-3 rounded border px-2 py-1 text-sm"
         value={name}
@@ -38,7 +38,9 @@ export function DatasetUploader({ onUploaded }: { onUploaded: (d: Dataset) => vo
         }}
       />
       <p className="mt-2 text-xs text-slate-500">
-        Required: dm.csv, sv.csv, vs.csv. Optional: ex.csv.
+        Accepts either (a) four SDTM files — dm.csv, sv.csv, vs.csv
+        (+ optional ex.csv) — OR (b) one combined CSV in wide format
+        (Subject_ID + Visit + Lab_* columns, e.g. a Medidata Rave export).
       </p>
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
     </div>

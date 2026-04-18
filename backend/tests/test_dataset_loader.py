@@ -186,6 +186,69 @@ def test_normalize_visit_name_handles_none_and_nan():
     assert normalize_visit_name(math.nan) == ""
 
 
+# ---------- Wide-format single-CSV auto-detection + pivot ----------
+
+def test_wide_format_single_csv_is_detected_and_pivoted(tmp_path):
+    """One CSV with Subject_ID + Visit + Lab_* columns → auto-pivoted into SDTM."""
+    # Looks like a Medidata Rave export row.
+    content = (
+        "Subject_ID,Site_ID,Age,Sex,Visit,Treatment_Arm,Dose_mg,"
+        "Lab_ALT,Lab_AST,Lab_Hb\n"
+        "S1000,US003,55,M,Week 4,Drug A,10,51.9,21.4,13.8\n"
+        "S1001,EU001,49,F,Baseline,Drug B,0,17.1,21.7,14.2\n"
+        "S1002,US001,70,M,Week 12,Drug A,20,30.0,22.0,11.9\n"
+    )
+    (tmp_path / "mock_rave_clinical_dataset.csv").write_text(content)
+
+    ds = load_dataset(tmp_path)
+
+    # DM: one row per subject.
+    assert ds.subjects() == ["S1000", "S1001", "S1002"]
+    assert set(ds.dm.columns) >= {"USUBJID", "SITEID", "AGE", "SEX"}
+    # SV: one row per (subject, visit), VISITNUM derived from visit name.
+    assert len(ds.sv) == 3
+    sv_sorted = ds.sv.sort_values("USUBJID").reset_index(drop=True)
+    assert sv_sorted.iloc[0]["VISITNUM"] == 4  # Week 4 → 4
+    assert sv_sorted.iloc[1]["VISITNUM"] == 0  # Baseline → 0
+    # VS: Lab_ALT / Lab_AST / Lab_Hb melted into VSTESTCD rows.
+    assert len(ds.vs) == 9  # 3 labs × 3 subjects
+    assert set(ds.vs["VSTESTCD"].unique()) == {"ALT", "AST", "HGB"}
+    # EX: Dose_mg becomes EXDOSE with EXTRT carried from Treatment_Arm.
+    assert ds.ex is not None
+    assert len(ds.ex) == 3
+
+
+def test_wide_format_demographics_accessible_by_subject(tmp_path):
+    content = (
+        "Subject_ID,Age,Sex,Visit,Lab_ALT\n"
+        "S1000,55,M,Week 4,50.0\n"
+    )
+    (tmp_path / "data.csv").write_text(content)
+    ds = load_dataset(tmp_path)
+    demo = ds.demographics("S1000")
+    assert demo["USUBJID"] == "S1000"
+    assert int(demo["AGE"]) == 55
+
+
+def test_wide_format_procedures_at_visit_returns_lab_codes(tmp_path):
+    content = (
+        "Subject_ID,Visit,Lab_ALT,Lab_Hb\n"
+        "S1000,Baseline,10.0,14.0\n"
+    )
+    (tmp_path / "rave_export.csv").write_text(content)
+    ds = load_dataset(tmp_path)
+    procs = ds.procedures_at("S1000", "Baseline")
+    assert set(procs) == {"ALT", "HGB"}
+
+
+def test_wide_format_without_dose_or_labs_falls_through_to_error(tmp_path):
+    """A CSV that's clearly not wide-format shouldn't be pivoted."""
+    content = "col_a,col_b\n1,2\n"
+    (tmp_path / "random.csv").write_text(content)
+    with pytest.raises(FileNotFoundError):
+        load_dataset(tmp_path)
+
+
 def test_procedures_at_visit_matches_case_insensitively(tmp_path):
     _write_dataset(
         tmp_path,
