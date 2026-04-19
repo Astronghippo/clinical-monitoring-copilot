@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict
 class FindingOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    analyzer: Literal["visit_windows", "completeness", "eligibility"]
+    analyzer: Literal["visit_windows", "completeness", "eligibility", "plausibility"]
     severity: Literal["critical", "major", "minor"]
     subject_id: str
     summary: str
@@ -17,6 +17,22 @@ class FindingOut(BaseModel):
     protocol_citation: str
     data_citation: dict
     confidence: float
+    status: Literal["open", "in_review", "resolved", "false_positive"] = "open"
+    assignee: str | None = None
+    notes: str | None = None
+    updated_at: datetime | None = None
+
+
+class FindingStatusUpdate(BaseModel):
+    """Payload for PATCH /findings/{id}. Any omitted field stays unchanged."""
+    status: Literal["open", "in_review", "resolved", "false_positive"] | None = None
+    assignee: str | None = None
+    notes: str | None = None
+
+
+class FindingBulkStatusUpdate(BaseModel):
+    finding_ids: list[int]
+    status: Literal["open", "in_review", "resolved", "false_positive"]
 
 
 class AnalysisOut(BaseModel):
