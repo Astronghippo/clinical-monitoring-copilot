@@ -62,4 +62,11 @@ class FindingRow(Base):
     protocol_citation: Mapped[str] = mapped_column(String(128))
     data_citation: Mapped[dict] = mapped_column(JSON)
     confidence: Mapped[float] = mapped_column(Float)
+    # Workflow fields — CRAs triage findings over time.
+    status: Mapped[str] = mapped_column(String(16), default="open")  # open|in_review|resolved|false_positive
+    assignee: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow,
+    )
     analysis: Mapped[Analysis] = relationship(back_populates="findings")

@@ -20,6 +20,11 @@ _PG_ADDITIVE_PATCHES: list[tuple[str, str]] = [
     ("protocols", "parse_error TEXT"),
     ("protocols", "summary_json JSONB"),
     ("analyses", "name VARCHAR(255)"),
+    # --- Phase A: finding workflow ---
+    ("findings", "status VARCHAR(16) DEFAULT 'open'"),
+    ("findings", "assignee VARCHAR(64)"),
+    ("findings", "notes TEXT"),
+    ("findings", "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
 ]
 
 
