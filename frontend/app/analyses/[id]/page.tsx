@@ -9,6 +9,7 @@ import { FindingDetail } from "@/components/FindingDetail";
 import { FindingsFilterBar } from "@/components/FindingsFilterBar";
 import { ProgressIndicator } from "@/components/ProgressIndicator";
 import { EditableHeading } from "@/components/EditableHeading";
+import { BulkActionsBar } from "@/components/BulkActionsBar";
 
 function downloadCsv(findings: Finding[], analysisId: number) {
   const escape = (v: unknown) => {
@@ -57,6 +58,7 @@ export default function AnalysisPage() {
   const params = useParams<{ id: string }>();
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [selected, setSelected] = useState<Finding | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   // Filter state — persisted as URL query params would be nicer, but
   // component-local state is fine for now.
@@ -138,6 +140,53 @@ export default function AnalysisPage() {
     );
   }
 
+  function toggleSelected(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  async function bulkStatus(status: FindingStatus) {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    await api.bulkUpdateStatus(ids, status);
+    setAnalysis((prev) =>
+      prev
+        ? {
+            ...prev,
+            findings: prev.findings.map((f) =>
+              selectedIds.has(f.id) ? { ...f, status } : f,
+            ),
+          }
+        : prev,
+    );
+    clearSelection();
+  }
+
+  async function bulkDraftLetters() {
+    if (!analysis) return;
+    const ids = Array.from(selectedIds);
+    const letters = await Promise.all(ids.map((id) => api.draftQueryLetter(id)));
+    const body = letters
+      .map((l) => `Subject: ${l.subject_line}\n\n${l.body}\n\nReply by: ${l.reply_by}`)
+      .join("\n\n=====\n\n");
+    const blob = new Blob([body], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `query-letters-analysis-${analysis.id}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    clearSelection();
+  }
+
   return (
     <main className="space-y-6">
       <div className="flex items-center justify-between">
@@ -216,6 +265,13 @@ export default function AnalysisPage() {
             />
           )}
 
+          <BulkActionsBar
+            count={selectedIds.size}
+            onClear={clearSelection}
+            onBulkStatus={bulkStatus}
+            onBulkDraftLetters={bulkDraftLetters}
+          />
+
           <FindingsTable
             findings={filtered}
             onSelect={setSelected}
@@ -232,6 +288,8 @@ export default function AnalysisPage() {
                   : prev,
               );
             }}
+            selectedIds={selectedIds}
+            onToggleSelected={toggleSelected}
           />
         </>
       )}
