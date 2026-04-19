@@ -14,7 +14,7 @@ RUN uv pip install --system --no-cache \
     fastapi "uvicorn[standard]" \
     sqlalchemy "psycopg[binary]" alembic \
     pydantic pydantic-settings python-multipart \
-    pypdf pandas anthropic
+    pypdf pandas anthropic reportlab
 
 COPY . .
 
