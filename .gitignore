@@ -24,3 +24,6 @@ data/sample_protocol.pdf
 
 # TypeScript build info
 *.tsbuildinfo
+
+# Worktrees
+.worktrees/
