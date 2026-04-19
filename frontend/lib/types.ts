@@ -1,5 +1,5 @@
 export type Severity = "critical" | "major" | "minor";
-export type AnalyzerKind = "visit_windows" | "completeness" | "eligibility";
+export type AnalyzerKind = "visit_windows" | "completeness" | "eligibility" | "plausibility";
 export type FindingStatus = "open" | "in_review" | "resolved" | "false_positive";
 
 export interface Finding {

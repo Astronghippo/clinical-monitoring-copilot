@@ -10,7 +10,7 @@ from app.services.protocol_parser import ProtocolSpec
 
 class Finding(BaseModel):
     """Single protocol deviation discovered by an analyzer."""
-    analyzer: Literal["visit_windows", "completeness", "eligibility"]
+    analyzer: Literal["visit_windows", "completeness", "eligibility", "plausibility"]
     severity: Literal["critical", "major", "minor"]
     subject_id: str
     summary: str

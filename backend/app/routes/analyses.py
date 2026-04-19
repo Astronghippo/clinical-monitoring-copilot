@@ -16,6 +16,7 @@ from app.schemas import AnalysisOut, AnalysisRename, AnalysisSummary, SubjectDri
 from app.services import audit as audit_service
 from app.services.analyzers.completeness import CompletenessAnalyzer
 from app.services.analyzers.eligibility import EligibilityAnalyzer
+from app.services.analyzers.plausibility import PlausibilityAnalyzer
 from app.services.analyzers.visit_windows import VisitWindowAnalyzer
 from app.services.dataset_loader import load_dataset
 from app.services.protocol_parser import ProtocolSpec
@@ -49,6 +50,7 @@ def _run_analysis(analysis_id: int) -> None:
                 VisitWindowAnalyzer(),
                 CompletenessAnalyzer(),
                 EligibilityAnalyzer(),
+                PlausibilityAnalyzer(),
             ):
                 for f in analyzer.run(spec=spec, dataset=dataset):
                     db.add(FindingRow(
