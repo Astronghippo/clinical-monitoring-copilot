@@ -23,6 +23,7 @@ interface Props {
   onStatusChange?: (id: number, next: FindingStatus) => Promise<void>;
   selectedIds?: Set<number>;
   onToggleSelected?: (id: number) => void;
+  onSubjectClick?: (subjectId: string) => void;
 }
 
 export function FindingsTable({
@@ -31,6 +32,7 @@ export function FindingsTable({
   onStatusChange,
   selectedIds,
   onToggleSelected,
+  onSubjectClick,
 }: Props) {
   if (findings.length === 0) {
     return <p className="text-slate-500">No findings match the current filters.</p>;
@@ -80,7 +82,22 @@ export function FindingsTable({
               <td className="px-3 py-2 text-slate-600">
                 {ANALYZER_LABEL[f.analyzer] ?? f.analyzer}
               </td>
-              <td className="px-3 py-2 font-mono">{f.subject_id}</td>
+              <td className="px-3 py-2 font-mono">
+                {onSubjectClick ? (
+                  <button
+                    type="button"
+                    className="text-blue-600 hover:underline font-mono"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSubjectClick(f.subject_id);
+                    }}
+                  >
+                    {f.subject_id}
+                  </button>
+                ) : (
+                  f.subject_id
+                )}
+              </td>
               <td className="px-3 py-2">{f.summary}</td>
               <td className="px-3 py-2 text-slate-500">
                 {(f.confidence * 100).toFixed(0)}%

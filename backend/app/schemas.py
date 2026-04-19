@@ -98,3 +98,15 @@ class AuditEventOut(BaseModel):
     before: dict | None = None
     after: dict | None = None
     created_at: datetime
+
+
+class VisitOut(BaseModel):
+    visit_name: str
+    visit_num: int | float
+    date: str | None
+    has_finding: bool
+
+
+class SubjectDrilldownOut(BaseModel):
+    findings: list[FindingOut]
+    visits: list[VisitOut]

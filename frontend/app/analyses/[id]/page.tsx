@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import type { Analysis, AnalyzerKind, Finding, FindingGroup, Severity, FindingStatus, SiteRollup } from "@/lib/types";
+import type { Analysis, AnalyzerKind, Finding, FindingGroup, Severity, FindingStatus, SiteRollup, SubjectDrilldown } from "@/lib/types";
 import { FindingsTable } from "@/components/FindingsTable";
 import { GroupedFindingsTable } from "@/components/GroupedFindingsTable";
 import { SiteHeatmap } from "@/components/SiteHeatmap";
@@ -12,6 +12,7 @@ import { FindingsFilterBar } from "@/components/FindingsFilterBar";
 import { ProgressIndicator } from "@/components/ProgressIndicator";
 import { EditableHeading } from "@/components/EditableHeading";
 import { BulkActionsBar } from "@/components/BulkActionsBar";
+import { SubjectPanel } from "@/components/SubjectPanel";
 
 const SEVERITY_ORDER: Record<Severity, number> = { critical: 0, major: 1, minor: 2 };
 
@@ -77,6 +78,8 @@ export default function AnalysisPage() {
   const [activeTab, setActiveTab] = useState<"findings" | "grouped" | "sites">("findings");
   const [groups, setGroups] = useState<FindingGroup[] | null>(null);
   const [siteRollup, setSiteRollup] = useState<SiteRollup[] | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [subjectData, setSubjectData] = useState<SubjectDrilldown | null>(null);
 
   useEffect(() => {
     if (activeTab === "grouped" && analysis && groups === null) {
@@ -86,6 +89,12 @@ export default function AnalysisPage() {
       api.getSiteRollup(analysis.id).then(setSiteRollup);
     }
   }, [activeTab, analysis, groups, siteRollup]);
+
+  useEffect(() => {
+    if (!selectedSubject || !analysis) return;
+    setSubjectData(null);
+    api.getSubjectDrilldown(analysis.id, selectedSubject).then(setSubjectData);
+  }, [selectedSubject, analysis]);
 
   useEffect(() => {
     let live = true;
@@ -360,9 +369,22 @@ export default function AnalysisPage() {
               }}
               selectedIds={selectedIds}
               onToggleSelected={toggleSelected}
+              onSubjectClick={(subjectId) => setSelectedSubject(subjectId)}
             />
           )}
         </>
+      )}
+
+      {/* Subject drill-down panel */}
+      {selectedSubject && (
+        <SubjectPanel
+          subjectId={selectedSubject}
+          data={subjectData}
+          onClose={() => {
+            setSelectedSubject(null);
+            setSubjectData(null);
+          }}
+        />
       )}
 
       {/* Modal: FindingDetail over a backdrop, ESC or backdrop-click to dismiss. */}

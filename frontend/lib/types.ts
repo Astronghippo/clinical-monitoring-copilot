@@ -117,6 +117,18 @@ export interface SiteRollup {
   counts: { critical: number; major: number; minor: number };
 }
 
+export interface SubjectVisit {
+  visit_name: string;
+  visit_num: number;
+  date: string | null;
+  has_finding: boolean;
+}
+
+export interface SubjectDrilldown {
+  findings: Finding[];
+  visits: SubjectVisit[];
+}
+
 export interface AuditEvent {
   id: number;
   event_type: string;

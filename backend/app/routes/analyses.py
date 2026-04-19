@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 
 from app.db import SessionLocal, get_db
 from app.models import Analysis, Dataset, FindingRow, Protocol
-from app.schemas import AnalysisOut, AnalysisRename, AnalysisSummary
+from app.schemas import AnalysisOut, AnalysisRename, AnalysisSummary, SubjectDrilldownOut, VisitOut
 from app.services import audit as audit_service
 from app.services.analyzers.completeness import CompletenessAnalyzer
 from app.services.analyzers.eligibility import EligibilityAnalyzer
@@ -268,6 +268,49 @@ def site_rollup(analysis_id: int, db: Session = Depends(get_db)) -> list[dict]:
             "counts": site_sev.get(site_id, {"critical": 0, "major": 0, "minor": 0}),
         })
     return results
+
+
+@router.get("/{analysis_id}/subjects/{subject_id}", response_model=SubjectDrilldownOut)
+def subject_drilldown(
+    analysis_id: int,
+    subject_id: str,
+    db: Session = Depends(get_db),
+) -> SubjectDrilldownOut:
+    """Return all findings and visit timeline for a single subject in an analysis."""
+    a = db.get(Analysis, analysis_id)
+    if a is None:
+        raise HTTPException(404, "Not found")
+
+    # Filter findings for this subject.
+    subject_findings = [f for f in a.findings if f.subject_id == subject_id]
+
+    # Build a set of visit names that have at least one finding (case-insensitive).
+    finding_visits: set[str] = set()
+    for f in subject_findings:
+        visit = (f.data_citation or {}).get("visit")
+        if visit:
+            finding_visits.add(str(visit).strip().lower())
+
+    # Load visits from dataset.
+    dataset_row = db.get(Dataset, a.dataset_id)
+    visits_out: list[VisitOut] = []
+    if dataset_row is not None:
+        try:
+            dataset = load_dataset(dataset_row.storage_path)
+            sv = dataset.visits_for(subject_id)
+            for _, row in sv.iterrows():
+                vname = str(row.get("VISIT", "") or "")
+                has_finding = vname.strip().lower() in finding_visits
+                visits_out.append(VisitOut(
+                    visit_name=vname,
+                    visit_num=row.get("VISITNUM", 0),
+                    date=row.get("SVSTDTC"),
+                    has_finding=has_finding,
+                ))
+        except Exception:  # noqa: BLE001
+            pass  # If dataset can't be loaded, return empty visits list
+
+    return SubjectDrilldownOut(findings=subject_findings, visits=visits_out)
 
 
 def _finding_template(f) -> str:

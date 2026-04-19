@@ -9,6 +9,7 @@ import type {
   Protocol,
   QueryLetter,
   SiteRollup,
+  SubjectDrilldown,
 } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -90,4 +91,9 @@ export const api = {
     json(await fetch(`${BASE}/analyses/${analysisId}/sites`)),
   listAuditEvents: async (): Promise<AuditEvent[]> =>
     json(await fetch(`${BASE}/audit`)),
+  getSubjectDrilldown: async (
+    analysisId: number,
+    subjectId: string,
+  ): Promise<SubjectDrilldown> =>
+    json(await fetch(`${BASE}/analyses/${analysisId}/subjects/${encodeURIComponent(subjectId)}`)),
 };
