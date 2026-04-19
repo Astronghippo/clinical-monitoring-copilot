@@ -211,6 +211,65 @@ def list_analyses(
     return summaries
 
 
+@router.get("/{analysis_id}/sites")
+def site_rollup(analysis_id: int, db: Session = Depends(get_db)) -> list[dict]:
+    """Return per-site aggregation of findings for the given analysis.
+
+    Each item: {site_id, subject_count, finding_count, deviation_rate, counts: {critical, major, minor}}
+    Subjects whose SITEID is absent from demographics are grouped under "UNKNOWN".
+    """
+    a = db.get(Analysis, analysis_id)
+    if a is None:
+        raise HTTPException(404, "Not found")
+
+    dataset_row = db.get(Dataset, a.dataset_id)
+    if dataset_row is None:
+        raise HTTPException(404, "Dataset not found")
+
+    dataset = load_dataset(dataset_row.storage_path)
+
+    # Build subject → site map from demographics.
+    subject_to_site: dict[str, str] = {}
+    for subj in dataset.subjects():
+        demo = dataset.demographics(subj)
+        subject_to_site[subj] = str(demo.get("SITEID") or "UNKNOWN") if demo.get("SITEID") else "UNKNOWN"
+
+    # Aggregate: site → {subject_count, finding_count, severity counts}
+    site_subjects: dict[str, set[str]] = {}
+    site_findings: dict[str, int] = {}
+    site_sev: dict[str, dict[str, int]] = {}
+
+    # Pre-populate all sites from the demographics so sites with 0 findings appear.
+    for subj, site in subject_to_site.items():
+        site_subjects.setdefault(site, set()).add(subj)
+        site_findings.setdefault(site, 0)
+        site_sev.setdefault(site, {"critical": 0, "major": 0, "minor": 0})
+
+    # Count findings per site.
+    for f in a.findings:
+        site = subject_to_site.get(f.subject_id, "UNKNOWN")
+        # Ensure site exists even if subject wasn't in demographics.
+        site_subjects.setdefault(site, set()).add(f.subject_id)
+        site_findings[site] = site_findings.get(site, 0) + 1
+        sev = site_sev.setdefault(site, {"critical": 0, "major": 0, "minor": 0})
+        sev_key = f.severity if f.severity in ("critical", "major", "minor") else "minor"
+        sev[sev_key] = sev.get(sev_key, 0) + 1
+
+    results = []
+    for site_id in sorted(site_subjects.keys()):
+        n_subjects = len(site_subjects[site_id])
+        n_findings = site_findings.get(site_id, 0)
+        deviation_rate = n_findings / n_subjects if n_subjects > 0 else 0.0
+        results.append({
+            "site_id": site_id,
+            "subject_count": n_subjects,
+            "finding_count": n_findings,
+            "deviation_rate": round(deviation_rate, 4),
+            "counts": site_sev.get(site_id, {"critical": 0, "major": 0, "minor": 0}),
+        })
+    return results
+
+
 def _finding_template(f) -> str:
     """Strip subject-specific tokens so near-duplicate findings share a template.
 

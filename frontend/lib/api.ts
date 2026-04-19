@@ -8,6 +8,7 @@ import type {
   FindingStatus,
   Protocol,
   QueryLetter,
+  SiteRollup,
 } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -85,6 +86,8 @@ export const api = {
     ),
   listGroupedFindings: async (analysisId: number): Promise<FindingGroup[]> =>
     json(await fetch(`${BASE}/analyses/${analysisId}/grouped`)),
+  getSiteRollup: async (analysisId: number): Promise<SiteRollup[]> =>
+    json(await fetch(`${BASE}/analyses/${analysisId}/sites`)),
   listAuditEvents: async (): Promise<AuditEvent[]> =>
     json(await fetch(`${BASE}/audit`)),
 };

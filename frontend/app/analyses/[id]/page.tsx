@@ -3,9 +3,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import type { Analysis, AnalyzerKind, Finding, FindingGroup, Severity, FindingStatus } from "@/lib/types";
+import type { Analysis, AnalyzerKind, Finding, FindingGroup, Severity, FindingStatus, SiteRollup } from "@/lib/types";
 import { FindingsTable } from "@/components/FindingsTable";
 import { GroupedFindingsTable } from "@/components/GroupedFindingsTable";
+import { SiteHeatmap } from "@/components/SiteHeatmap";
 import { FindingDetail } from "@/components/FindingDetail";
 import { FindingsFilterBar } from "@/components/FindingsFilterBar";
 import { ProgressIndicator } from "@/components/ProgressIndicator";
@@ -73,14 +74,18 @@ export default function AnalysisPage() {
   const [analyzerFilter, setAnalyzerFilter] = useState<AnalyzerKind | "all">("all");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<FindingStatus[]>(["open", "in_review"]);
-  const [grouped, setGrouped] = useState(false);
+  const [activeTab, setActiveTab] = useState<"findings" | "grouped" | "sites">("findings");
   const [groups, setGroups] = useState<FindingGroup[] | null>(null);
+  const [siteRollup, setSiteRollup] = useState<SiteRollup[] | null>(null);
 
   useEffect(() => {
-    if (grouped && analysis && groups === null) {
+    if (activeTab === "grouped" && analysis && groups === null) {
       api.listGroupedFindings(analysis.id).then(setGroups);
     }
-  }, [grouped, analysis, groups]);
+    if (activeTab === "sites" && analysis && siteRollup === null) {
+      api.getSiteRollup(analysis.id).then(setSiteRollup);
+    }
+  }, [activeTab, analysis, groups, siteRollup]);
 
   useEffect(() => {
     let live = true;
@@ -294,8 +299,8 @@ export default function AnalysisPage() {
                 onExportCsv={() => downloadCsv(filtered, analysis.id)}
                 statusFilter={statusFilter}
                 onToggleStatus={toggleStatus}
-                grouped={grouped}
-                onToggleGrouped={() => setGrouped((g) => !g)}
+                grouped={activeTab === "grouped"}
+                onToggleGrouped={() => setActiveTab((t) => t === "grouped" ? "findings" : "grouped")}
               />
             </>
           )}
@@ -307,7 +312,24 @@ export default function AnalysisPage() {
             onBulkDraftLetters={bulkDraftLetters}
           />
 
-          {grouped && groups ? (
+          {/* Tab bar */}
+          <div className="flex gap-1 border-b border-slate-200 mb-4">
+            {(["findings", "grouped", "sites"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2 text-sm font-medium capitalize rounded-t border-b-2 transition-colors ${
+                  activeTab === tab
+                    ? "border-blue-600 text-blue-700 bg-blue-50"
+                    : "border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                }`}
+              >
+                {tab === "grouped" ? "Grouped" : tab === "sites" ? "Sites" : "Findings"}
+              </button>
+            ))}
+          </div>
+
+          {activeTab === "grouped" && groups ? (
             <GroupedFindingsTable
               groups={groups.filter(
                 (g) =>
@@ -317,6 +339,8 @@ export default function AnalysisPage() {
               findingsById={findingsById}
               onSelect={setSelected}
             />
+          ) : activeTab === "sites" ? (
+            <SiteHeatmap sites={siteRollup ?? []} />
           ) : (
             <FindingsTable
               findings={filtered}

@@ -109,6 +109,14 @@ export interface FindingGroup {
   finding_ids: number[];
 }
 
+export interface SiteRollup {
+  site_id: string;
+  subject_count: number;
+  finding_count: number;
+  deviation_rate: number;
+  counts: { critical: number; major: number; minor: number };
+}
+
 export interface AuditEvent {
   id: number;
   event_type: string;
