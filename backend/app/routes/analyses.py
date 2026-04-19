@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -181,3 +183,43 @@ def list_analyses(
             )
         )
     return summaries
+
+
+def _finding_template(f) -> str:
+    """Strip subject-specific tokens so near-duplicate findings share a template.
+
+    Example: "Subject 1001 V2 (Week 2) missing required: Labs" →
+             "V2 (Week 2) missing required: Labs"
+    """
+    s = f.summary or ""
+    s = re.sub(r"^Subject\s+\S+\s+", "", s)
+    return s.strip()
+
+
+@router.get("/{analysis_id}/grouped")
+def grouped_findings(analysis_id: int, db: Session = Depends(get_db)) -> list[dict]:
+    a = db.get(Analysis, analysis_id)
+    if a is None:
+        raise HTTPException(404, "Not found")
+    groups: dict[tuple[str, str, str], dict] = {}
+    for f in a.findings:
+        key = (_finding_template(f), f.analyzer, f.severity)
+        g = groups.get(key)
+        if g is None:
+            groups[key] = {
+                "template": key[0],
+                "analyzer": key[1],
+                "severity": key[2],
+                "count": 1,
+                "subject_ids": [f.subject_id],
+                "finding_ids": [f.id],
+            }
+        else:
+            g["count"] += 1
+            g["subject_ids"].append(f.subject_id)
+            g["finding_ids"].append(f.id)
+    sev_order = {"critical": 0, "major": 1, "minor": 2}
+    return sorted(
+        groups.values(),
+        key=lambda g: (sev_order.get(g["severity"], 99), -g["count"]),
+    )
