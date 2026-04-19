@@ -12,6 +12,7 @@ from sqlalchemy.orm import selectinload
 from app.db import SessionLocal, get_db
 from app.models import Analysis, Dataset, FindingRow, Protocol
 from app.schemas import AnalysisOut, AnalysisRename, AnalysisSummary
+from app.services import audit as audit_service
 from app.services.analyzers.completeness import CompletenessAnalyzer
 from app.services.analyzers.eligibility import EligibilityAnalyzer
 from app.services.analyzers.visit_windows import VisitWindowAnalyzer
@@ -96,6 +97,12 @@ def create_analysis(
     db.add(a)
     db.commit()
     db.refresh(a)
+    audit_service.record(
+        db, event_type="analysis.run",
+        subject_kind="analysis", subject_id=a.id,
+        after={"protocol_id": a.protocol_id, "dataset_id": a.dataset_id},
+    )
+    db.commit()
     bg.add_task(_run_analysis, a.id)
     return a
 

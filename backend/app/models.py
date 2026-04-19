@@ -70,3 +70,15 @@ class FindingRow(Base):
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow,
     )
     analysis: Mapped[Analysis] = relationship(back_populates="findings")
+
+
+class AuditEvent(Base):
+    __tablename__ = "audit_events"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_type: Mapped[str] = mapped_column(String(48))
+    subject_kind: Mapped[str] = mapped_column(String(16))
+    subject_id: Mapped[int] = mapped_column(Integer)
+    actor: Mapped[str] = mapped_column(String(64), default="system")
+    before: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    after: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

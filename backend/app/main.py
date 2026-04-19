@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routes import admin, analyses, datasets, findings, protocols
+from app.routes import admin, analyses, audit, datasets, findings, protocols
 
 app = FastAPI(title="Clinical Monitoring Copilot")
 
@@ -24,3 +24,4 @@ app.include_router(datasets.router)
 app.include_router(analyses.router)
 app.include_router(findings.router)
 app.include_router(admin.router)
+app.include_router(audit.router)

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Analysis, Dataset, FindingRow, Protocol
 from app.schemas import FindingOut, FindingStatusUpdate, FindingBulkStatusUpdate
+from app.services import audit as audit_service
 from app.services.dataset_loader import load_dataset
 from app.services.query_letter import draft_query_letter
 
@@ -38,9 +39,17 @@ def update_finding(
     f = db.get(FindingRow, finding_id)
     if f is None:
         raise HTTPException(404, "Finding not found")
+    before = {
+        "status": f.status, "assignee": f.assignee, "notes": f.notes,
+    }
     data = body.model_dump(exclude_unset=True)
     for k, v in data.items():
         setattr(f, k, v)
+    audit_service.record(
+        db, event_type="finding.update",
+        subject_kind="finding", subject_id=finding_id,
+        before=before, after=body.model_dump(exclude_unset=True),
+    )
     db.commit()
     db.refresh(f)
     return f
