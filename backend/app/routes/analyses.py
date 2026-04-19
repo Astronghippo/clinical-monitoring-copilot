@@ -232,7 +232,7 @@ def site_rollup(analysis_id: int, db: Session = Depends(get_db)) -> list[dict]:
     subject_to_site: dict[str, str] = {}
     for subj in dataset.subjects():
         demo = dataset.demographics(subj)
-        subject_to_site[subj] = str(demo.get("SITEID") or "UNKNOWN") if demo.get("SITEID") else "UNKNOWN"
+        subject_to_site[subj] = str(demo.get("SITEID") or "UNKNOWN")
 
     # Aggregate: site → {subject_count, finding_count, severity counts}
     site_subjects: dict[str, set[str]] = {}

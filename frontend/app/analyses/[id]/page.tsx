@@ -299,8 +299,6 @@ export default function AnalysisPage() {
                 onExportCsv={() => downloadCsv(filtered, analysis.id)}
                 statusFilter={statusFilter}
                 onToggleStatus={toggleStatus}
-                grouped={activeTab === "grouped"}
-                onToggleGrouped={() => setActiveTab((t) => t === "grouped" ? "findings" : "grouped")}
               />
             </>
           )}
@@ -318,7 +316,7 @@ export default function AnalysisPage() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 text-sm font-medium capitalize rounded-t border-b-2 transition-colors ${
+                className={`px-4 py-2 text-sm font-medium rounded-t border-b-2 transition-colors ${
                   activeTab === tab
                     ? "border-blue-600 text-blue-700 bg-blue-50"
                     : "border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50"
@@ -339,8 +337,10 @@ export default function AnalysisPage() {
               findingsById={findingsById}
               onSelect={setSelected}
             />
+          ) : activeTab === "sites" && siteRollup !== null ? (
+            <SiteHeatmap sites={siteRollup} />
           ) : activeTab === "sites" ? (
-            <SiteHeatmap sites={siteRollup ?? []} />
+            <p className="text-slate-500">Loading site data…</p>
           ) : (
             <FindingsTable
               findings={filtered}

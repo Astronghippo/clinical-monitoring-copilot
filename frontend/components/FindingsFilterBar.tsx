@@ -14,8 +14,6 @@ interface Props {
   onExportCsv: () => void;
   statusFilter: FindingStatus[];
   onToggleStatus: (s: FindingStatus) => void;
-  grouped: boolean;
-  onToggleGrouped: () => void;
 }
 
 const SEVERITY_BUTTON: Record<Severity, string> = {
@@ -36,8 +34,6 @@ export function FindingsFilterBar({
   onExportCsv,
   statusFilter,
   onToggleStatus,
-  grouped,
-  onToggleGrouped,
 }: Props) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
@@ -123,12 +119,6 @@ export function FindingsFilterBar({
             className="w-full min-w-[200px] rounded border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 placeholder-slate-400"
           />
         </div>
-
-        {/* Group toggle */}
-        <label className="inline-flex items-center gap-1 text-xs text-slate-600">
-          <input type="checkbox" checked={grouped} onChange={onToggleGrouped} />
-          Group similar
-        </label>
 
         {/* Export + count */}
         <div className="flex items-center gap-3">
