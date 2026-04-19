@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -19,7 +19,11 @@ from app.services.analyzers.eligibility import EligibilityAnalyzer
 from app.services.analyzers.plausibility import PlausibilityAnalyzer
 from app.services.analyzers.visit_windows import VisitWindowAnalyzer
 from app.services.dataset_loader import load_dataset
-from app.services.protocol_parser import ProtocolSpec
+from app.services.protocol_parser import (
+    ProtocolSpec,
+    extract_text_from_pdf_bytes,
+    parse_protocol_text,
+)
 from app.services.report_pdf import render_analysis_pdf
 
 
@@ -353,3 +357,104 @@ def grouped_findings(analysis_id: int, db: Session = Depends(get_db)) -> list[di
         groups.values(),
         key=lambda g: (sev_order.get(g["severity"], 99), -g["count"]),
     )
+
+
+@router.post("/{analysis_id}/amendment-diff")
+async def amendment_diff(
+    analysis_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Compare an amended protocol PDF against the stored protocol for this analysis.
+
+    Returns a structured diff of added/removed/changed visits and eligibility criteria,
+    plus a list of existing finding IDs that would likely be resolved by the amendment.
+    """
+    a = db.get(Analysis, analysis_id)
+    if a is None:
+        raise HTTPException(404, "Not found")
+
+    # Validate uploaded file is a PDF.
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(400, "PDF required")
+
+    data = await file.read()
+    try:
+        text = extract_text_from_pdf_bytes(data)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(400, f"PDF extraction failed: {type(e).__name__}: {e}")
+
+    try:
+        amended_spec = parse_protocol_text(text)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(400, f"Protocol parsing failed: {type(e).__name__}: {e}")
+
+    # Load the original protocol spec.
+    p = db.get(Protocol, a.protocol_id)
+    if p is None or p.spec_json is None:
+        raise HTTPException(400, "Original protocol spec not available")
+    original_spec = ProtocolSpec.model_validate(p.spec_json)
+
+    # --- Diff visits ---
+    original_visits_by_name = {v.name: v for v in original_spec.visits}
+    amended_visits_by_name = {v.name: v for v in amended_spec.visits}
+
+    added_visits = [
+        name for name in amended_visits_by_name if name not in original_visits_by_name
+    ]
+    removed_visits = [
+        name for name in original_visits_by_name if name not in amended_visits_by_name
+    ]
+    changed_visits = [
+        name
+        for name, orig_v in original_visits_by_name.items()
+        if name in amended_visits_by_name
+        and (
+            amended_visits_by_name[name].window_minus_days != orig_v.window_minus_days
+            or amended_visits_by_name[name].window_plus_days != orig_v.window_plus_days
+        )
+    ]
+
+    # --- Diff eligibility criteria ---
+    original_criteria_texts = {c.text for c in original_spec.eligibility}
+    amended_criteria_texts = {c.text for c in amended_spec.eligibility}
+
+    added_criteria = [
+        c.text for c in amended_spec.eligibility if c.text not in original_criteria_texts
+    ]
+    removed_criteria = [
+        c.text for c in original_spec.eligibility if c.text not in amended_criteria_texts
+    ]
+
+    # --- Identify obsolete findings ---
+    # Build sets for fast lookup.
+    removed_or_changed_visit_names = set(removed_visits) | set(changed_visits)
+
+    obsolete_finding_ids: list[int] = []
+    for f in a.findings:
+        if f.analyzer == "visit_windows":
+            # Check if the finding's protocol_citation matches a removed/changed visit name.
+            citation = f.protocol_citation or ""
+            if any(
+                visit_name in citation
+                for visit_name in removed_or_changed_visit_names
+            ):
+                obsolete_finding_ids.append(f.id)
+        elif f.analyzer == "eligibility":
+            # Check if any removed criterion text appears in detail or protocol_citation.
+            detail = f.detail or ""
+            citation = f.protocol_citation or ""
+            if any(
+                crit_text in detail or crit_text in citation
+                for crit_text in removed_criteria
+            ):
+                obsolete_finding_ids.append(f.id)
+
+    return {
+        "added_visits": added_visits,
+        "removed_visits": removed_visits,
+        "changed_visits": changed_visits,
+        "added_criteria": added_criteria,
+        "removed_criteria": removed_criteria,
+        "obsolete_finding_ids": obsolete_finding_ids,
+    }

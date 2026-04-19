@@ -139,3 +139,12 @@ export interface AuditEvent {
   after: unknown;
   created_at: string;
 }
+
+export interface AmendmentDiff {
+  added_visits: string[];
+  removed_visits: string[];
+  changed_visits: string[];
+  added_criteria: string[];
+  removed_criteria: string[];
+  obsolete_finding_ids: number[];
+}

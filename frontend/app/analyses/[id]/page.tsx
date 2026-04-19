@@ -13,6 +13,7 @@ import { ProgressIndicator } from "@/components/ProgressIndicator";
 import { EditableHeading } from "@/components/EditableHeading";
 import { BulkActionsBar } from "@/components/BulkActionsBar";
 import { SubjectPanel } from "@/components/SubjectPanel";
+import { AmendmentDiff } from "@/components/AmendmentDiff";
 
 const SEVERITY_ORDER: Record<Severity, number> = { critical: 0, major: 1, minor: 2 };
 
@@ -80,6 +81,7 @@ export default function AnalysisPage() {
   const [siteRollup, setSiteRollup] = useState<SiteRollup[] | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [subjectData, setSubjectData] = useState<SubjectDrilldown | null>(null);
+  const [showAmendmentDiff, setShowAmendmentDiff] = useState(false);
 
   useEffect(() => {
     if (activeTab === "grouped" && analysis && groups === null) {
@@ -312,6 +314,12 @@ export default function AnalysisPage() {
                 >
                   Download PDF report
                 </a>
+                <button
+                  onClick={() => setShowAmendmentDiff(true)}
+                  className="inline-flex items-center gap-1 rounded border border-blue-200 bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100"
+                >
+                  Check Amendment
+                </button>
               </div>
               <FindingsFilterBar
                 severityFilter={severityFilter}
@@ -402,6 +410,26 @@ export default function AnalysisPage() {
             setSubjectData(null);
           }}
         />
+      )}
+
+      {/* Modal: Amendment diff panel */}
+      {showAmendmentDiff && (
+        <div
+          role="presentation"
+          onClick={() => setShowAmendmentDiff(false)}
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 md:items-center"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-xl"
+          >
+            <AmendmentDiff
+              analysisId={analysis.id}
+              findings={analysis.findings}
+              onClose={() => setShowAmendmentDiff(false)}
+            />
+          </div>
+        </div>
       )}
 
       {/* Modal: FindingDetail over a backdrop, ESC or backdrop-click to dismiss. */}

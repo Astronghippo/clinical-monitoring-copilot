@@ -1,4 +1,5 @@
 import type {
+  AmendmentDiff,
   Analysis,
   AnalysisSummary,
   AuditEvent,
@@ -96,4 +97,14 @@ export const api = {
     subjectId: string,
   ): Promise<SubjectDrilldown> =>
     json(await fetch(`${BASE}/analyses/${analysisId}/subjects/${encodeURIComponent(subjectId)}`)),
+  checkAmendment: async (analysisId: number, file: File): Promise<AmendmentDiff> => {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`${BASE}/analyses/${analysisId}/amendment-diff`, {
+      method: "POST",
+      body: form,
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
 };
