@@ -22,12 +22,20 @@ export default function Home() {
             Upload a protocol and patient dataset to detect deviations.
           </p>
         </div>
-        <a
-          href="/analyses"
-          className="rounded border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 shadow-sm hover:bg-slate-50"
-        >
-          Past analyses →
-        </a>
+        <div className="flex gap-2">
+          <a
+            href="/analyses"
+            className="rounded border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 shadow-sm hover:bg-slate-50"
+          >
+            Past analyses →
+          </a>
+          <a
+            href="/audit"
+            className="rounded border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 shadow-sm hover:bg-slate-50"
+          >
+            Audit log →
+          </a>
+        </div>
       </header>
       <ProtocolUploader onUploaded={setProtocol} />
       {protocol && (

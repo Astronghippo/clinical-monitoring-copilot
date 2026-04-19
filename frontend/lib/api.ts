@@ -1,6 +1,7 @@
 import type {
   Analysis,
   AnalysisSummary,
+  AuditEvent,
   Dataset,
   Finding,
   FindingGroup,
@@ -84,4 +85,6 @@ export const api = {
     ),
   listGroupedFindings: async (analysisId: number): Promise<FindingGroup[]> =>
     json(await fetch(`${BASE}/analyses/${analysisId}/grouped`)),
+  listAuditEvents: async (): Promise<AuditEvent[]> =>
+    json(await fetch(`${BASE}/audit`)),
 };

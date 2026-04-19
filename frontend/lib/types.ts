@@ -108,3 +108,14 @@ export interface FindingGroup {
   subject_ids: string[];
   finding_ids: number[];
 }
+
+export interface AuditEvent {
+  id: number;
+  event_type: string;
+  subject_kind: "analysis" | "finding" | "protocol";
+  subject_id: number;
+  actor: string;
+  before: unknown;
+  after: unknown;
+  created_at: string;
+}
