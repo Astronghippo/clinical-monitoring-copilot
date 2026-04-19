@@ -14,6 +14,10 @@ const f: Finding = {
   protocol_citation: "Eligibility, E2",
   data_citation: { domain: "DM", usubjid: "1012" },
   confidence: 0.8,
+  status: "open",
+  assignee: null,
+  notes: null,
+  updated_at: null,
 };
 
 describe("FindingDetail", () => {

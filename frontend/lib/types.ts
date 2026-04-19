@@ -1,5 +1,6 @@
 export type Severity = "critical" | "major" | "minor";
 export type AnalyzerKind = "visit_windows" | "completeness" | "eligibility";
+export type FindingStatus = "open" | "in_review" | "resolved" | "false_positive";
 
 export interface Finding {
   id: number;
@@ -11,6 +12,10 @@ export interface Finding {
   protocol_citation: string;
   data_citation: Record<string, unknown>;
   confidence: number;
+  status: FindingStatus;
+  assignee: string | null;
+  notes: string | null;
+  updated_at: string | null;
 }
 
 export interface Analysis {

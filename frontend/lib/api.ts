@@ -2,6 +2,8 @@ import type {
   Analysis,
   AnalysisSummary,
   Dataset,
+  Finding,
+  FindingStatus,
   Protocol,
   QueryLetter,
 } from "./types";
@@ -55,6 +57,28 @@ export const api = {
     json(
       await fetch(`${BASE}/findings/${findingId}/query-letter`, {
         method: "POST",
+      }),
+    ),
+  updateFinding: async (
+    id: number,
+    patch: { status?: FindingStatus; assignee?: string | null; notes?: string | null },
+  ): Promise<Finding> =>
+    json(
+      await fetch(`${BASE}/findings/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      }),
+    ),
+  bulkUpdateStatus: async (
+    findingIds: number[],
+    status: FindingStatus,
+  ): Promise<{ updated: number }> =>
+    json(
+      await fetch(`${BASE}/findings/bulk-status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ finding_ids: findingIds, status }),
       }),
     ),
 };

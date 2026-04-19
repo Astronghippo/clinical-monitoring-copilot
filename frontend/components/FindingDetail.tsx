@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Check, Copy, Mail, X } from "lucide-react";
 import { api } from "@/lib/api";
+import { FindingStatusBadge } from "./FindingStatusBadge";
 import type { Finding, QueryLetter } from "@/lib/types";
 
 interface Props {
@@ -53,6 +54,16 @@ export function FindingDetail({ finding, onClose }: Props) {
             Subject <span className="font-mono">{finding.subject_id}</span>
             {" · "}confidence {(finding.confidence * 100).toFixed(0)}%
           </p>
+          <div className="mt-2">
+            <FindingStatusBadge
+              value={finding.status}
+              onChange={async (next) => {
+                await api.updateFinding(finding.id, { status: next });
+                // Optimistically reflect in the displayed finding (parent may refetch).
+                finding.status = next;
+              }}
+            />
+          </div>
         </div>
         <button
           type="button"

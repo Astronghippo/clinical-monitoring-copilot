@@ -15,6 +15,10 @@ function f(overrides: Partial<Finding> = {}): Finding {
     protocol_citation: "§6",
     data_citation: {},
     confidence: 1.0,
+    status: "open",
+    assignee: null,
+    notes: null,
+    updated_at: null,
     ...overrides,
   };
 }
