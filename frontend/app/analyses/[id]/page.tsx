@@ -273,21 +273,31 @@ export default function AnalysisPage() {
           )}
 
           {analysis.findings.length > 0 && (
-            <FindingsFilterBar
-              severityFilter={severityFilter}
-              onToggleSeverity={toggleSeverity}
-              analyzerFilter={analyzerFilter}
-              onChangeAnalyzer={setAnalyzerFilter}
-              search={search}
-              onChangeSearch={setSearch}
-              filteredCount={filtered.length}
-              totalCount={analysis.findings.length}
-              onExportCsv={() => downloadCsv(filtered, analysis.id)}
-              statusFilter={statusFilter}
-              onToggleStatus={toggleStatus}
-              grouped={grouped}
-              onToggleGrouped={() => setGrouped((g) => !g)}
-            />
+            <>
+              <div className="flex gap-2 mb-4">
+                <a
+                  href={`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/analyses/${analysis.id}/report.pdf`}
+                  className="inline-flex items-center gap-1 rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                >
+                  Download PDF report
+                </a>
+              </div>
+              <FindingsFilterBar
+                severityFilter={severityFilter}
+                onToggleSeverity={toggleSeverity}
+                analyzerFilter={analyzerFilter}
+                onChangeAnalyzer={setAnalyzerFilter}
+                search={search}
+                onChangeSearch={setSearch}
+                filteredCount={filtered.length}
+                totalCount={analysis.findings.length}
+                onExportCsv={() => downloadCsv(filtered, analysis.id)}
+                statusFilter={statusFilter}
+                onToggleStatus={toggleStatus}
+                grouped={grouped}
+                onToggleGrouped={() => setGrouped((g) => !g)}
+              />
+            </>
           )}
 
           <BulkActionsBar

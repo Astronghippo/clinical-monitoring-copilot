@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -18,6 +19,7 @@ from app.services.analyzers.eligibility import EligibilityAnalyzer
 from app.services.analyzers.visit_windows import VisitWindowAnalyzer
 from app.services.dataset_loader import load_dataset
 from app.services.protocol_parser import ProtocolSpec
+from app.services.report_pdf import render_analysis_pdf
 
 
 router = APIRouter(prefix="/analyses", tags=["analyses"])
@@ -113,6 +115,23 @@ def get_analysis(analysis_id: int, db: Session = Depends(get_db)) -> Analysis:
     if a is None:
         raise HTTPException(404, "Not found")
     return a
+
+
+@router.get("/{analysis_id}/report.pdf")
+def analysis_pdf(analysis_id: int, db: Session = Depends(get_db)) -> Response:
+    a = db.get(Analysis, analysis_id)
+    if a is None:
+        raise HTTPException(404, "Not found")
+    p = db.get(Protocol, a.protocol_id)
+    if p is None:
+        raise HTTPException(404, "Protocol missing")
+    pdf = render_analysis_pdf(a, p)
+    filename = f"{(a.name or f'analysis-{a.id}').replace(' ', '_')}.pdf"
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.patch("/{analysis_id}", response_model=AnalysisOut)
