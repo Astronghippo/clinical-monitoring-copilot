@@ -141,6 +141,15 @@ export default function AnalysisPage() {
     return () => document.removeEventListener("keydown", handler);
   }, [selected]);
 
+  useEffect(() => {
+    if (!showAmendmentDiff) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowAmendmentDiff(false);
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [showAmendmentDiff]);
+
   const filtered = useMemo(() => {
     if (!analysis) return [];
     const q = search.trim().toLowerCase();
@@ -421,6 +430,9 @@ export default function AnalysisPage() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Amendment diff"
             className="w-full max-w-xl"
           >
             <AmendmentDiff

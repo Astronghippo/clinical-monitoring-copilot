@@ -374,6 +374,9 @@ async def amendment_diff(
     if a is None:
         raise HTTPException(404, "Not found")
 
+    if a.status not in ("done", "error"):
+        raise HTTPException(400, "Analysis must be complete before running amendment diff")
+
     # Validate uploaded file is a PDF.
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(400, "PDF required")
@@ -409,10 +412,7 @@ async def amendment_diff(
         name
         for name, orig_v in original_visits_by_name.items()
         if name in amended_visits_by_name
-        and (
-            amended_visits_by_name[name].window_minus_days != orig_v.window_minus_days
-            or amended_visits_by_name[name].window_plus_days != orig_v.window_plus_days
-        )
+        and amended_visits_by_name[name] != orig_v
     ]
 
     # --- Diff eligibility criteria ---

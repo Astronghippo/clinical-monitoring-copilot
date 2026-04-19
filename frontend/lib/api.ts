@@ -104,7 +104,14 @@ export const api = {
       method: "POST",
       body: form,
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) {
+      let msg = `${res.status} ${res.statusText}`;
+      try {
+        const body = await res.json() as { detail?: string };
+        msg = body.detail ?? msg;
+      } catch { /* use status fallback */ }
+      throw new Error(msg);
+    }
     return res.json();
   },
 };
