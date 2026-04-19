@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import re
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -10,11 +13,13 @@ from sqlalchemy.orm import selectinload
 from app.db import SessionLocal, get_db
 from app.models import Analysis, Dataset, FindingRow, Protocol
 from app.schemas import AnalysisOut, AnalysisRename, AnalysisSummary
+from app.services import audit as audit_service
 from app.services.analyzers.completeness import CompletenessAnalyzer
 from app.services.analyzers.eligibility import EligibilityAnalyzer
 from app.services.analyzers.visit_windows import VisitWindowAnalyzer
 from app.services.dataset_loader import load_dataset
 from app.services.protocol_parser import ProtocolSpec
+from app.services.report_pdf import render_analysis_pdf
 
 
 router = APIRouter(prefix="/analyses", tags=["analyses"])
@@ -94,6 +99,12 @@ def create_analysis(
     db.add(a)
     db.commit()
     db.refresh(a)
+    audit_service.record(
+        db, event_type="analysis.run",
+        subject_kind="analysis", subject_id=a.id,
+        after={"protocol_id": a.protocol_id, "dataset_id": a.dataset_id},
+    )
+    db.commit()
     bg.add_task(_run_analysis, a.id)
     return a
 
@@ -104,6 +115,23 @@ def get_analysis(analysis_id: int, db: Session = Depends(get_db)) -> Analysis:
     if a is None:
         raise HTTPException(404, "Not found")
     return a
+
+
+@router.get("/{analysis_id}/report.pdf")
+def analysis_pdf(analysis_id: int, db: Session = Depends(get_db)) -> Response:
+    a = db.get(Analysis, analysis_id)
+    if a is None:
+        raise HTTPException(404, "Not found")
+    p = db.get(Protocol, a.protocol_id)
+    if p is None:
+        raise HTTPException(404, "Protocol missing")
+    pdf = render_analysis_pdf(a, p)
+    filename = f"{(a.name or f'analysis-{a.id}').replace(' ', '_')}.pdf"
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.patch("/{analysis_id}", response_model=AnalysisOut)
@@ -181,3 +209,43 @@ def list_analyses(
             )
         )
     return summaries
+
+
+def _finding_template(f) -> str:
+    """Strip subject-specific tokens so near-duplicate findings share a template.
+
+    Example: "Subject 1001 V2 (Week 2) missing required: Labs" →
+             "V2 (Week 2) missing required: Labs"
+    """
+    s = f.summary or ""
+    s = re.sub(r"^Subject\s+\S+\s+", "", s)
+    return s.strip()
+
+
+@router.get("/{analysis_id}/grouped")
+def grouped_findings(analysis_id: int, db: Session = Depends(get_db)) -> list[dict]:
+    a = db.get(Analysis, analysis_id)
+    if a is None:
+        raise HTTPException(404, "Not found")
+    groups: dict[tuple[str, str, str], dict] = {}
+    for f in a.findings:
+        key = (_finding_template(f), f.analyzer, f.severity)
+        g = groups.get(key)
+        if g is None:
+            groups[key] = {
+                "template": key[0],
+                "analyzer": key[1],
+                "severity": key[2],
+                "count": 1,
+                "subject_ids": [f.subject_id],
+                "finding_ids": [f.id],
+            }
+        else:
+            g["count"] += 1
+            g["subject_ids"].append(f.subject_id)
+            g["finding_ids"].append(f.id)
+    sev_order = {"critical": 0, "major": 1, "minor": 2}
+    return sorted(
+        groups.values(),
+        key=lambda g: (sev_order.get(g["severity"], 99), -g["count"]),
+    )

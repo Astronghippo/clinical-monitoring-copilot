@@ -1,5 +1,6 @@
 export type Severity = "critical" | "major" | "minor";
 export type AnalyzerKind = "visit_windows" | "completeness" | "eligibility";
+export type FindingStatus = "open" | "in_review" | "resolved" | "false_positive";
 
 export interface Finding {
   id: number;
@@ -11,6 +12,10 @@ export interface Finding {
   protocol_citation: string;
   data_citation: Record<string, unknown>;
   confidence: number;
+  status: FindingStatus;
+  assignee: string | null;
+  notes: string | null;
+  updated_at: string | null;
 }
 
 export interface Analysis {
@@ -93,4 +98,24 @@ export interface QueryLetter {
   subject_line: string;
   body: string;
   reply_by: string;
+}
+
+export interface FindingGroup {
+  template: string;
+  analyzer: AnalyzerKind;
+  severity: Severity;
+  count: number;
+  subject_ids: string[];
+  finding_ids: number[];
+}
+
+export interface AuditEvent {
+  id: number;
+  event_type: string;
+  subject_kind: "analysis" | "finding" | "protocol";
+  subject_id: number;
+  actor: string;
+  before: unknown;
+  after: unknown;
+  created_at: string;
 }

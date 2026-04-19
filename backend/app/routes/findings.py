@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import Analysis, Dataset, FindingRow, Protocol
+from app.schemas import FindingOut, FindingStatusUpdate, FindingBulkStatusUpdate
+from app.services import audit as audit_service
 from app.services.dataset_loader import load_dataset
 from app.services.query_letter import draft_query_letter
 
@@ -18,6 +20,55 @@ class QueryLetterOut(BaseModel):
     subject_line: str
     body: str
     reply_by: str
+
+
+@router.get("/{finding_id}", response_model=FindingOut)
+def get_finding(finding_id: int, db: Session = Depends(get_db)) -> FindingRow:
+    f = db.get(FindingRow, finding_id)
+    if f is None:
+        raise HTTPException(404, "Finding not found")
+    return f
+
+
+@router.patch("/{finding_id}", response_model=FindingOut)
+def update_finding(
+    finding_id: int,
+    body: FindingStatusUpdate,
+    db: Session = Depends(get_db),
+) -> FindingRow:
+    f = db.get(FindingRow, finding_id)
+    if f is None:
+        raise HTTPException(404, "Finding not found")
+    before = {
+        "status": f.status, "assignee": f.assignee, "notes": f.notes,
+    }
+    data = body.model_dump(exclude_unset=True)
+    for k, v in data.items():
+        setattr(f, k, v)
+    audit_service.record(
+        db, event_type="finding.update",
+        subject_kind="finding", subject_id=finding_id,
+        before=before, after=body.model_dump(exclude_unset=True),
+    )
+    db.commit()
+    db.refresh(f)
+    return f
+
+
+@router.post("/bulk-status")
+def bulk_status_update(
+    body: FindingBulkStatusUpdate,
+    db: Session = Depends(get_db),
+) -> dict:
+    if not body.finding_ids:
+        return {"updated": 0}
+    n = (
+        db.query(FindingRow)
+        .filter(FindingRow.id.in_(body.finding_ids))
+        .update({"status": body.status}, synchronize_session=False)
+    )
+    db.commit()
+    return {"updated": n}
 
 
 @router.post("/{finding_id}/query-letter", response_model=QueryLetterOut)

@@ -1,7 +1,11 @@
 import type {
   Analysis,
   AnalysisSummary,
+  AuditEvent,
   Dataset,
+  Finding,
+  FindingGroup,
+  FindingStatus,
   Protocol,
   QueryLetter,
 } from "./types";
@@ -57,4 +61,30 @@ export const api = {
         method: "POST",
       }),
     ),
+  updateFinding: async (
+    id: number,
+    patch: { status?: FindingStatus; assignee?: string | null; notes?: string | null },
+  ): Promise<Finding> =>
+    json(
+      await fetch(`${BASE}/findings/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      }),
+    ),
+  bulkUpdateStatus: async (
+    findingIds: number[],
+    status: FindingStatus,
+  ): Promise<{ updated: number }> =>
+    json(
+      await fetch(`${BASE}/findings/bulk-status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ finding_ids: findingIds, status }),
+      }),
+    ),
+  listGroupedFindings: async (analysisId: number): Promise<FindingGroup[]> =>
+    json(await fetch(`${BASE}/analyses/${analysisId}/grouped`)),
+  listAuditEvents: async (): Promise<AuditEvent[]> =>
+    json(await fetch(`${BASE}/audit`)),
 };

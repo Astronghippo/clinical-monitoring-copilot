@@ -3,12 +3,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import type { Analysis, AnalyzerKind, Finding, Severity } from "@/lib/types";
+import type { Analysis, AnalyzerKind, Finding, FindingGroup, Severity, FindingStatus } from "@/lib/types";
 import { FindingsTable } from "@/components/FindingsTable";
+import { GroupedFindingsTable } from "@/components/GroupedFindingsTable";
 import { FindingDetail } from "@/components/FindingDetail";
 import { FindingsFilterBar } from "@/components/FindingsFilterBar";
 import { ProgressIndicator } from "@/components/ProgressIndicator";
 import { EditableHeading } from "@/components/EditableHeading";
+import { BulkActionsBar } from "@/components/BulkActionsBar";
+
+const SEVERITY_ORDER: Record<Severity, number> = { critical: 0, major: 1, minor: 2 };
 
 function downloadCsv(findings: Finding[], analysisId: number) {
   const escape = (v: unknown) => {
@@ -57,6 +61,7 @@ export default function AnalysisPage() {
   const params = useParams<{ id: string }>();
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [selected, setSelected] = useState<Finding | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   // Filter state — persisted as URL query params would be nicer, but
   // component-local state is fine for now.
@@ -67,6 +72,15 @@ export default function AnalysisPage() {
   ]);
   const [analyzerFilter, setAnalyzerFilter] = useState<AnalyzerKind | "all">("all");
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<FindingStatus[]>(["open", "in_review"]);
+  const [grouped, setGrouped] = useState(false);
+  const [groups, setGroups] = useState<FindingGroup[] | null>(null);
+
+  useEffect(() => {
+    if (grouped && analysis && groups === null) {
+      api.listGroupedFindings(analysis.id).then(setGroups);
+    }
+  }, [grouped, analysis, groups]);
 
   useEffect(() => {
     let live = true;
@@ -97,9 +111,10 @@ export default function AnalysisPage() {
   const filtered = useMemo(() => {
     if (!analysis) return [];
     const q = search.trim().toLowerCase();
-    return analysis.findings.filter((f) => {
+    const rows = analysis.findings.filter((f) => {
       if (!severityFilter.includes(f.severity)) return false;
       if (analyzerFilter !== "all" && f.analyzer !== analyzerFilter) return false;
+      if (!statusFilter.includes(f.status)) return false;
       if (
         q &&
         !f.subject_id.toLowerCase().includes(q) &&
@@ -108,7 +123,19 @@ export default function AnalysisPage() {
         return false;
       return true;
     });
-  }, [analysis, severityFilter, analyzerFilter, search]);
+    const sorted = [...rows].sort(
+      (a, b) =>
+        SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] ||
+        a.subject_id.localeCompare(b.subject_id),
+    );
+    return sorted;
+  }, [analysis, severityFilter, analyzerFilter, search, statusFilter]);
+
+  const findingsById = useMemo(() => {
+    const m = new Map<number, Finding>();
+    if (analysis) for (const f of analysis.findings) m.set(f.id, f);
+    return m;
+  }, [analysis]);
 
   if (!analysis) return <p className="text-slate-500">Loading…</p>;
 
@@ -128,6 +155,59 @@ export default function AnalysisPage() {
     setSeverityFilter((prev) =>
       prev.includes(sev) ? prev.filter((s) => s !== sev) : [...prev, sev],
     );
+  }
+
+  function toggleStatus(s: FindingStatus) {
+    setStatusFilter((prev) =>
+      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s],
+    );
+  }
+
+  function toggleSelected(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  async function bulkStatus(status: FindingStatus) {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    await api.bulkUpdateStatus(ids, status);
+    setAnalysis((prev) =>
+      prev
+        ? {
+            ...prev,
+            findings: prev.findings.map((f) =>
+              selectedIds.has(f.id) ? { ...f, status } : f,
+            ),
+          }
+        : prev,
+    );
+    clearSelection();
+  }
+
+  async function bulkDraftLetters() {
+    if (!analysis) return;
+    const ids = Array.from(selectedIds);
+    const letters = await Promise.all(ids.map((id) => api.draftQueryLetter(id)));
+    const body = letters
+      .map((l) => `Subject: ${l.subject_line}\n\n${l.body}\n\nReply by: ${l.reply_by}`)
+      .join("\n\n=====\n\n");
+    const blob = new Blob([body], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `query-letters-analysis-${analysis.id}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    clearSelection();
   }
 
   return (
@@ -193,20 +273,71 @@ export default function AnalysisPage() {
           )}
 
           {analysis.findings.length > 0 && (
-            <FindingsFilterBar
-              severityFilter={severityFilter}
-              onToggleSeverity={toggleSeverity}
-              analyzerFilter={analyzerFilter}
-              onChangeAnalyzer={setAnalyzerFilter}
-              search={search}
-              onChangeSearch={setSearch}
-              filteredCount={filtered.length}
-              totalCount={analysis.findings.length}
-              onExportCsv={() => downloadCsv(filtered, analysis.id)}
-            />
+            <>
+              <div className="flex gap-2 mb-4">
+                <a
+                  href={`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/analyses/${analysis.id}/report.pdf`}
+                  className="inline-flex items-center gap-1 rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                >
+                  Download PDF report
+                </a>
+              </div>
+              <FindingsFilterBar
+                severityFilter={severityFilter}
+                onToggleSeverity={toggleSeverity}
+                analyzerFilter={analyzerFilter}
+                onChangeAnalyzer={setAnalyzerFilter}
+                search={search}
+                onChangeSearch={setSearch}
+                filteredCount={filtered.length}
+                totalCount={analysis.findings.length}
+                onExportCsv={() => downloadCsv(filtered, analysis.id)}
+                statusFilter={statusFilter}
+                onToggleStatus={toggleStatus}
+                grouped={grouped}
+                onToggleGrouped={() => setGrouped((g) => !g)}
+              />
+            </>
           )}
 
-          <FindingsTable findings={filtered} onSelect={setSelected} />
+          <BulkActionsBar
+            count={selectedIds.size}
+            onClear={clearSelection}
+            onBulkStatus={bulkStatus}
+            onBulkDraftLetters={bulkDraftLetters}
+          />
+
+          {grouped && groups ? (
+            <GroupedFindingsTable
+              groups={groups.filter(
+                (g) =>
+                  severityFilter.includes(g.severity) &&
+                  (analyzerFilter === "all" || g.analyzer === analyzerFilter),
+              )}
+              findingsById={findingsById}
+              onSelect={setSelected}
+            />
+          ) : (
+            <FindingsTable
+              findings={filtered}
+              onSelect={setSelected}
+              onStatusChange={async (id, next) => {
+                await api.updateFinding(id, { status: next });
+                setAnalysis((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        findings: prev.findings.map((f) =>
+                          f.id === id ? { ...f, status: next } : f,
+                        ),
+                      }
+                    : prev,
+                );
+              }}
+              selectedIds={selectedIds}
+              onToggleSelected={toggleSelected}
+            />
+          )}
         </>
       )}
 
