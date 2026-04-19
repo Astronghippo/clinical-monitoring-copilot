@@ -25,12 +25,15 @@ _RULES: dict[str, tuple[float, float, str]] = {
     "HR":      (20.0,  300.0, "bpm"),
     "HEARTRT": (20.0,  300.0, "bpm"),
     # Temperature
+    # NOTE: assumes Celsius; Fahrenheit would be 95–113°F
     "TEMP":    (32.0,  45.0,  "°C"),
     # Respiratory rate
     "RESP":    (5.0,   60.0,  "/min"),
     # HbA1c
     "HBA1C":   (2.0,   20.0,  "%"),
     # Glucose — two common TESTCDs
+    # NOTE: assumes mmol/L; US sites may record glucose in mg/dL (range ~18–1080).
+    # VSORRESU column would need to be read for unit-aware checking.
     "GLUC":    (1.0,   60.0,  "mmol/L"),
     "GLUCOSE": (1.0,   60.0,  "mmol/L"),
     # Anthropometrics
@@ -48,6 +51,9 @@ def _severity(value: float, lo: float, hi: float) -> str:
     Beyond 20% of range width outside bounds → critical.
     """
     if value == 0.0 and lo > 0:
+        # Zero in a numeric VSORRES typically indicates the EDC was submitted without a value
+        # (missing data), not a true physiological reading. Flag minor to distinguish from
+        # a genuinely implausible non-zero value.
         return "minor"
 
     range_width = hi - lo
@@ -74,6 +80,8 @@ class PlausibilityAnalyzer:
         if dataset.vs.empty:
             return findings
 
+        # subjects() is keyed off demographics (DM domain) — the authoritative enrollment list.
+        # Subjects in VS but not in DM are intentionally skipped (fragmented import edge case).
         for subject_id in dataset.subjects():
             subject_vs = dataset.vs[dataset.vs["USUBJID"].astype(str) == subject_id]
 
@@ -100,8 +108,8 @@ class PlausibilityAnalyzer:
                 vsdtc = str(row.get("VSDTC", "") or "").strip()
 
                 summary = (
-                    f"Subject {subject_id} {testcd} value {value} {unit} "
-                    f"is outside plausible range [{lo}, {hi}]"
+                    f"Subject {subject_id} {testcd} value {value:g} {unit} "
+                    f"is outside plausible range [{lo:g}, {hi:g}]"
                 )
                 detail = (
                     f"Recorded value: {value} {unit}. "
