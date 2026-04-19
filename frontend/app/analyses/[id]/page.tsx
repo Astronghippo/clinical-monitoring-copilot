@@ -3,13 +3,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import type { Analysis, AnalyzerKind, Finding, Severity, FindingStatus } from "@/lib/types";
+import type { Analysis, AnalyzerKind, Finding, FindingGroup, Severity, FindingStatus } from "@/lib/types";
 import { FindingsTable } from "@/components/FindingsTable";
+import { GroupedFindingsTable } from "@/components/GroupedFindingsTable";
 import { FindingDetail } from "@/components/FindingDetail";
 import { FindingsFilterBar } from "@/components/FindingsFilterBar";
 import { ProgressIndicator } from "@/components/ProgressIndicator";
 import { EditableHeading } from "@/components/EditableHeading";
 import { BulkActionsBar } from "@/components/BulkActionsBar";
+
+const SEVERITY_ORDER: Record<Severity, number> = { critical: 0, major: 1, minor: 2 };
 
 function downloadCsv(findings: Finding[], analysisId: number) {
   const escape = (v: unknown) => {
@@ -70,6 +73,14 @@ export default function AnalysisPage() {
   const [analyzerFilter, setAnalyzerFilter] = useState<AnalyzerKind | "all">("all");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<FindingStatus[]>(["open", "in_review"]);
+  const [grouped, setGrouped] = useState(false);
+  const [groups, setGroups] = useState<FindingGroup[] | null>(null);
+
+  useEffect(() => {
+    if (grouped && analysis && groups === null) {
+      api.listGroupedFindings(analysis.id).then(setGroups);
+    }
+  }, [grouped, analysis, groups]);
 
   useEffect(() => {
     let live = true;
@@ -100,7 +111,7 @@ export default function AnalysisPage() {
   const filtered = useMemo(() => {
     if (!analysis) return [];
     const q = search.trim().toLowerCase();
-    return analysis.findings.filter((f) => {
+    const rows = analysis.findings.filter((f) => {
       if (!severityFilter.includes(f.severity)) return false;
       if (analyzerFilter !== "all" && f.analyzer !== analyzerFilter) return false;
       if (!statusFilter.includes(f.status)) return false;
@@ -112,7 +123,19 @@ export default function AnalysisPage() {
         return false;
       return true;
     });
+    const sorted = [...rows].sort(
+      (a, b) =>
+        SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] ||
+        a.subject_id.localeCompare(b.subject_id),
+    );
+    return sorted;
   }, [analysis, severityFilter, analyzerFilter, search, statusFilter]);
+
+  const findingsById = useMemo(() => {
+    const m = new Map<number, Finding>();
+    if (analysis) for (const f of analysis.findings) m.set(f.id, f);
+    return m;
+  }, [analysis]);
 
   if (!analysis) return <p className="text-slate-500">Loading…</p>;
 
@@ -262,6 +285,8 @@ export default function AnalysisPage() {
               onExportCsv={() => downloadCsv(filtered, analysis.id)}
               statusFilter={statusFilter}
               onToggleStatus={toggleStatus}
+              grouped={grouped}
+              onToggleGrouped={() => setGrouped((g) => !g)}
             />
           )}
 
@@ -272,25 +297,37 @@ export default function AnalysisPage() {
             onBulkDraftLetters={bulkDraftLetters}
           />
 
-          <FindingsTable
-            findings={filtered}
-            onSelect={setSelected}
-            onStatusChange={async (id, next) => {
-              await api.updateFinding(id, { status: next });
-              setAnalysis((prev) =>
-                prev
-                  ? {
-                      ...prev,
-                      findings: prev.findings.map((f) =>
-                        f.id === id ? { ...f, status: next } : f,
-                      ),
-                    }
-                  : prev,
-              );
-            }}
-            selectedIds={selectedIds}
-            onToggleSelected={toggleSelected}
-          />
+          {grouped && groups ? (
+            <GroupedFindingsTable
+              groups={groups.filter(
+                (g) =>
+                  severityFilter.includes(g.severity) &&
+                  (analyzerFilter === "all" || g.analyzer === analyzerFilter),
+              )}
+              findingsById={findingsById}
+              onSelect={setSelected}
+            />
+          ) : (
+            <FindingsTable
+              findings={filtered}
+              onSelect={setSelected}
+              onStatusChange={async (id, next) => {
+                await api.updateFinding(id, { status: next });
+                setAnalysis((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        findings: prev.findings.map((f) =>
+                          f.id === id ? { ...f, status: next } : f,
+                        ),
+                      }
+                    : prev,
+                );
+              }}
+              selectedIds={selectedIds}
+              onToggleSelected={toggleSelected}
+            />
+          )}
         </>
       )}
 

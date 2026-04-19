@@ -3,6 +3,7 @@ import type {
   AnalysisSummary,
   Dataset,
   Finding,
+  FindingGroup,
   FindingStatus,
   Protocol,
   QueryLetter,
@@ -81,4 +82,6 @@ export const api = {
         body: JSON.stringify({ finding_ids: findingIds, status }),
       }),
     ),
+  listGroupedFindings: async (analysisId: number): Promise<FindingGroup[]> =>
+    json(await fetch(`${BASE}/analyses/${analysisId}/grouped`)),
 };

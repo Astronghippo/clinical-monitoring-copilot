@@ -99,3 +99,12 @@ export interface QueryLetter {
   body: string;
   reply_by: string;
 }
+
+export interface FindingGroup {
+  template: string;
+  analyzer: AnalyzerKind;
+  severity: Severity;
+  count: number;
+  subject_ids: string[];
+  finding_ids: number[];
+}
