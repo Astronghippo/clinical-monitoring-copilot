@@ -1,7 +1,8 @@
 "use client";
 import React from "react";
 import { clsx } from "clsx";
-import type { Finding } from "@/lib/types";
+import type { Finding, FindingStatus } from "@/lib/types";
+import { FindingStatusBadge } from "./FindingStatusBadge";
 
 const SEV_STYLES: Record<string, string> = {
   critical: "bg-red-100 text-red-800",
@@ -13,27 +14,39 @@ const ANALYZER_LABEL: Record<string, string> = {
   visit_windows: "Visit window",
   completeness: "Completeness",
   eligibility: "Eligibility",
+  plausibility: "Plausibility",
 };
 
 interface Props {
   findings: Finding[];
   onSelect?: (f: Finding) => void;
+  onStatusChange?: (id: number, next: FindingStatus) => Promise<void>;
+  selectedIds?: Set<number>;
+  onToggleSelected?: (id: number) => void;
 }
 
-export function FindingsTable({ findings, onSelect }: Props) {
+export function FindingsTable({
+  findings,
+  onSelect,
+  onStatusChange,
+  selectedIds,
+  onToggleSelected,
+}: Props) {
   if (findings.length === 0) {
-    return <p className="text-slate-500">No findings yet.</p>;
+    return <p className="text-slate-500">No findings match the current filters.</p>;
   }
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
       <table className="w-full text-sm">
         <thead className="bg-slate-50 text-left text-slate-600">
           <tr>
+            {onToggleSelected && <th className="px-3 py-2 w-10">✓</th>}
             <th className="px-3 py-2">Severity</th>
             <th className="px-3 py-2">Analyzer</th>
             <th className="px-3 py-2">Subject</th>
             <th className="px-3 py-2">Finding</th>
             <th className="px-3 py-2">Confidence</th>
+            {onStatusChange && <th className="px-3 py-2">Status</th>}
           </tr>
         </thead>
         <tbody>
@@ -44,6 +57,16 @@ export function FindingsTable({ findings, onSelect }: Props) {
               onClick={() => onSelect?.(f)}
               data-testid={`finding-row-${f.id}`}
             >
+              {onToggleSelected && (
+                <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds?.has(f.id) ?? false}
+                    onChange={() => onToggleSelected(f.id)}
+                    className="rounded border-slate-300"
+                  />
+                </td>
+              )}
               <td className="px-3 py-2">
                 <span
                   className={clsx(
@@ -62,6 +85,14 @@ export function FindingsTable({ findings, onSelect }: Props) {
               <td className="px-3 py-2 text-slate-500">
                 {(f.confidence * 100).toFixed(0)}%
               </td>
+              {onStatusChange && (
+                <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                  <FindingStatusBadge
+                    value={f.status}
+                    onChange={(next) => onStatusChange(f.id, next)}
+                  />
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

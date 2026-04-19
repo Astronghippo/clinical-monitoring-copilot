@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import type { Analysis, AnalyzerKind, Finding, Severity } from "@/lib/types";
+import type { Analysis, AnalyzerKind, Finding, Severity, FindingStatus } from "@/lib/types";
 import { FindingsTable } from "@/components/FindingsTable";
 import { FindingDetail } from "@/components/FindingDetail";
 import { FindingsFilterBar } from "@/components/FindingsFilterBar";
@@ -67,6 +67,7 @@ export default function AnalysisPage() {
   ]);
   const [analyzerFilter, setAnalyzerFilter] = useState<AnalyzerKind | "all">("all");
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<FindingStatus[]>(["open", "in_review"]);
 
   useEffect(() => {
     let live = true;
@@ -100,6 +101,7 @@ export default function AnalysisPage() {
     return analysis.findings.filter((f) => {
       if (!severityFilter.includes(f.severity)) return false;
       if (analyzerFilter !== "all" && f.analyzer !== analyzerFilter) return false;
+      if (!statusFilter.includes(f.status)) return false;
       if (
         q &&
         !f.subject_id.toLowerCase().includes(q) &&
@@ -108,7 +110,7 @@ export default function AnalysisPage() {
         return false;
       return true;
     });
-  }, [analysis, severityFilter, analyzerFilter, search]);
+  }, [analysis, severityFilter, analyzerFilter, search, statusFilter]);
 
   if (!analysis) return <p className="text-slate-500">Loading…</p>;
 
@@ -127,6 +129,12 @@ export default function AnalysisPage() {
   function toggleSeverity(sev: Severity) {
     setSeverityFilter((prev) =>
       prev.includes(sev) ? prev.filter((s) => s !== sev) : [...prev, sev],
+    );
+  }
+
+  function toggleStatus(s: FindingStatus) {
+    setStatusFilter((prev) =>
+      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s],
     );
   }
 
@@ -203,10 +211,28 @@ export default function AnalysisPage() {
               filteredCount={filtered.length}
               totalCount={analysis.findings.length}
               onExportCsv={() => downloadCsv(filtered, analysis.id)}
+              statusFilter={statusFilter}
+              onToggleStatus={toggleStatus}
             />
           )}
 
-          <FindingsTable findings={filtered} onSelect={setSelected} />
+          <FindingsTable
+            findings={filtered}
+            onSelect={setSelected}
+            onStatusChange={async (id, next) => {
+              await api.updateFinding(id, { status: next });
+              setAnalysis((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      findings: prev.findings.map((f) =>
+                        f.id === id ? { ...f, status: next } : f,
+                      ),
+                    }
+                  : prev,
+              );
+            }}
+          />
         </>
       )}
 

@@ -1,6 +1,6 @@
 "use client";
 import { Download } from "lucide-react";
-import type { AnalyzerKind, Severity } from "@/lib/types";
+import type { AnalyzerKind, Severity, FindingStatus } from "@/lib/types";
 
 interface Props {
   severityFilter: Severity[];
@@ -12,6 +12,8 @@ interface Props {
   filteredCount: number;
   totalCount: number;
   onExportCsv: () => void;
+  statusFilter: FindingStatus[];
+  onToggleStatus: (s: FindingStatus) => void;
 }
 
 const SEVERITY_BUTTON: Record<Severity, string> = {
@@ -30,6 +32,8 @@ export function FindingsFilterBar({
   filteredCount,
   totalCount,
   onExportCsv,
+  statusFilter,
+  onToggleStatus,
 }: Props) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
@@ -53,6 +57,30 @@ export function FindingsFilterBar({
                 }`}
               >
                 {sev}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Status toggle chips */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Status:
+          </span>
+          {(["open", "in_review", "resolved", "false_positive"] as const).map((s) => {
+            const active = statusFilter.includes(s);
+            return (
+              <button
+                type="button"
+                key={s}
+                onClick={() => onToggleStatus(s)}
+                className={`rounded border px-2 py-0.5 text-xs font-medium transition ${
+                  active
+                    ? "border-slate-300 bg-slate-100 text-slate-700"
+                    : "border-slate-200 bg-white text-slate-400 hover:bg-slate-50"
+                }`}
+              >
+                {s.replace("_", " ")}
               </button>
             );
           })}
