@@ -92,9 +92,26 @@ export default function AnalysisPage() {
 
   useEffect(() => {
     if (!selectedSubject || !analysis) return;
+    let cancelled = false;
     setSubjectData(null);
-    api.getSubjectDrilldown(analysis.id, selectedSubject).then(setSubjectData);
+    api.getSubjectDrilldown(analysis.id, selectedSubject)
+      .then((data) => { if (!cancelled) setSubjectData(data); })
+      .catch(() => { if (!cancelled) setSelectedSubject(null); });
+    return () => { cancelled = true; };
   }, [selectedSubject, analysis]);
+
+  // Close subject panel on ESC for a11y (mirrors FindingDetail ESC handler).
+  useEffect(() => {
+    if (!selectedSubject) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSelectedSubject(null);
+        setSubjectData(null);
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [selectedSubject]);
 
   useEffect(() => {
     let live = true;

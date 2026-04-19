@@ -85,7 +85,7 @@ export function SubjectPanel({ subjectId, data, onClose }: Props) {
               <div className="flex flex-wrap gap-2">
                 {data.visits.map((v) => (
                   <span
-                    key={v.visit_name}
+                    key={`${v.visit_name}-${v.visit_num}`}
                     data-testid={`visit-chip-${v.visit_name}`}
                     className={clsx(
                       "rounded-full px-3 py-1 text-xs font-medium",
@@ -130,7 +130,7 @@ export function SubjectPanel({ subjectId, data, onClose }: Props) {
                           STATUS_STYLES[f.status] ?? "bg-slate-100 text-slate-600",
                         )}
                       >
-                        {f.status.replace("_", " ")}
+                        {f.status.replace(/_/g, " ")}
                       </span>
                       <span className="ml-auto text-xs text-slate-500">
                         {ANALYZER_LABEL[f.analyzer] ?? f.analyzer}
