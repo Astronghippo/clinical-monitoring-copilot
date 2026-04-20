@@ -14,6 +14,7 @@ import { EditableHeading } from "@/components/EditableHeading";
 import { BulkActionsBar } from "@/components/BulkActionsBar";
 import { SubjectPanel } from "@/components/SubjectPanel";
 import { AmendmentDiff } from "@/components/AmendmentDiff";
+import { DigestPanel } from "@/components/DigestPanel";
 
 const SEVERITY_ORDER: Record<Severity, number> = { critical: 0, major: 1, minor: 2 };
 
@@ -82,6 +83,7 @@ export default function AnalysisPage() {
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [subjectData, setSubjectData] = useState<SubjectDrilldown | null>(null);
   const [showAmendmentDiff, setShowAmendmentDiff] = useState(false);
+  const [showDigest, setShowDigest] = useState(false);
 
   useEffect(() => {
     if (activeTab === "grouped" && analysis && groups === null) {
@@ -329,7 +331,18 @@ export default function AnalysisPage() {
                 >
                   Check Amendment
                 </button>
+                <button
+                  onClick={() => setShowDigest((v) => !v)}
+                  className="inline-flex items-center gap-1 rounded border border-violet-200 bg-violet-50 px-2 py-1 text-xs text-violet-700 hover:bg-violet-100"
+                >
+                  {showDigest ? "Hide digest" : "Weekly digest"}
+                </button>
               </div>
+              {showDigest && (
+                <div className="mb-4">
+                  <DigestPanel analysisId={analysis.id} />
+                </div>
+              )}
               <FindingsFilterBar
                 severityFilter={severityFilter}
                 onToggleSeverity={toggleSeverity}

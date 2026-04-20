@@ -24,8 +24,12 @@ from app.services.protocol_parser import (
     extract_text_from_pdf_bytes,
     parse_protocol_text,
 )
+from app.services.digest import draft_digest
+from app.services.llm_client import LLMClient
 from app.services.report_pdf import render_analysis_pdf
 
+# Module-level LLM instances so tests can monkeypatch them.
+_digest_llm: LLMClient | None = None
 
 router = APIRouter(prefix="/analyses", tags=["analyses"])
 
@@ -458,3 +462,40 @@ async def amendment_diff(
         "removed_criteria": removed_criteria,
         "obsolete_finding_ids": obsolete_finding_ids,
     }
+
+
+class DigestOut(BaseModel):
+    digest: str
+
+
+@router.post("/{analysis_id}/digest", response_model=DigestOut)
+def generate_digest(
+    analysis_id: int,
+    db: Session = Depends(get_db),
+) -> DigestOut:
+    """Generate a 2-paragraph narrative digest of all findings in the analysis."""
+    from sqlalchemy import select as sa_select
+    analysis = db.scalars(
+        sa_select(Analysis).options(selectinload(Analysis.findings)).where(Analysis.id == analysis_id)
+    ).first()
+    if analysis is None:
+        raise HTTPException(404, "Analysis not found")
+    if analysis.status != "done":
+        raise HTTPException(409, "Analysis is not complete yet")
+
+    protocol = db.get(Protocol, analysis.protocol_id)
+    study_id = protocol.study_id if protocol else "UNKNOWN"
+
+    findings_data = [
+        {
+            "analyzer": f.analyzer,
+            "severity": f.severity,
+            "subject_id": f.subject_id,
+            "summary": f.summary,
+            "status": f.status,
+        }
+        for f in analysis.findings
+    ]
+
+    text = draft_digest(study_id=study_id, findings=findings_data, llm=_digest_llm)
+    return DigestOut(digest=text)

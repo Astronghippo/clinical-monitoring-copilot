@@ -60,6 +60,10 @@ export const api = {
         body: JSON.stringify({ name }),
       }),
     ),
+  generateDigest: async (analysisId: number): Promise<{ digest: string }> =>
+    json(
+      await fetch(`${BASE}/analyses/${analysisId}/digest`, { method: "POST" }),
+    ),
   draftQueryLetter: async (findingId: number): Promise<QueryLetter> =>
     json(
       await fetch(`${BASE}/findings/${findingId}/query-letter`, {
