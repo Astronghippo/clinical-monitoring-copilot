@@ -17,6 +17,7 @@ import { AmendmentDiff } from "@/components/AmendmentDiff";
 import { DigestPanel } from "@/components/DigestPanel";
 import { NLFilterBar } from "@/components/NLFilterBar";
 import type { NLFilters } from "@/components/NLFilterBar";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 const SEVERITY_ORDER: Record<Severity, number> = { critical: 0, major: 1, minor: 2 };
 
@@ -260,6 +261,14 @@ export default function AnalysisPage() {
 
   return (
     <main className="space-y-6">
+      <Breadcrumbs
+        items={[
+          { label: "Home", href: "/" },
+          { label: "Analyses", href: "/analyses" },
+          { label: analysis.name ?? `Analysis #${analysis.id}` },
+        ]}
+      />
+
       <div className="flex items-center justify-between">
         <Link
           href="/"

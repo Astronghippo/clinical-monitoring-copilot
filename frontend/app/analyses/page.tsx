@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import type { AnalysisSummary } from "@/lib/types";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 function formatTimestamp(iso: string): string {
   // Server returns naive UTC — append Z so JS parses correctly.
@@ -37,6 +38,8 @@ export default function AnalysisListPage() {
 
   return (
     <main className="space-y-6">
+      <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Analyses" }]} />
+
       <Link
         href="/"
         className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900"
