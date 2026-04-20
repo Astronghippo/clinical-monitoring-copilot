@@ -95,6 +95,7 @@ export default function AnalysisPage() {
   const [showDigest, setShowDigest] = useState(false);
   const [showBulkLetters, setShowBulkLetters] = useState(false);
   const [minConfidence, setMinConfidence] = useState(0);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     if (activeTab === "grouped" && analysis && groups === null) {
@@ -274,6 +275,21 @@ export default function AnalysisPage() {
     clearSelection();
   }
 
+  async function handleCancel() {
+    if (cancelling) return;
+    setCancelling(true);
+    try {
+      const updated = await api.cancelAnalysis(analysis.id);
+      setAnalysis((prev) => prev ? { ...prev, status: updated.status } : updated);
+    } catch {
+      // If the request fails (e.g. already done), just re-poll to get fresh state.
+      const fresh = await api.getAnalysis(analysis.id);
+      setAnalysis(fresh);
+    } finally {
+      setCancelling(false);
+    }
+  }
+
   async function bulkDraftLetters() {
     setShowBulkLetters(true);
   }
@@ -336,12 +352,31 @@ export default function AnalysisPage() {
       </header>
 
       {inProgress ? (
-        <ProgressIndicator
-          status={analysis.status}
-          startedAt={analysis.created_at}
-        />
+        <div className="space-y-3">
+          <ProgressIndicator
+            status={analysis.status}
+            startedAt={analysis.created_at}
+          />
+          <div className="flex justify-end">
+            <button
+              onClick={handleCancel}
+              disabled={cancelling}
+              className="rounded border border-red-200 bg-red-50 px-3 py-1.5 text-sm text-red-700 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {cancelling ? "Cancelling…" : "Cancel analysis"}
+            </button>
+          </div>
+        </div>
       ) : (
         <>
+          {analysis.status === "cancelled" && (
+            <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 text-sm text-orange-800">
+              Analysis was cancelled.
+              {analysis.findings.length > 0
+                ? ` Partial results from ${analysis.findings.length} finding${analysis.findings.length === 1 ? "" : "s"} collected before cancellation are shown below.`
+                : " No findings were collected."}
+            </div>
+          )}
           {analysis.status === "error" && !hasErrorFinding && (
             <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
               Analysis finished with errors — see the critical row below for details.

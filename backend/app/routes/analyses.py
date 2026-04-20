@@ -62,6 +62,10 @@ def _run_analysis(analysis_id: int) -> None:
                 EligibilityAnalyzer(),
                 PlausibilityAnalyzer(),
             ):
+                # Re-read status from DB before each analyzer to honour cancellation.
+                db.refresh(a)
+                if a.status == "cancelled":
+                    return
                 for f in analyzer.run(spec=spec, dataset=dataset):
                     db.add(FindingRow(
                         analysis_id=a.id,
@@ -74,8 +78,14 @@ def _run_analysis(analysis_id: int) -> None:
                         data_citation=f.data_citation,
                         confidence=f.confidence,
                     ))
-            a.status = "done"
+            # Final cancellation check before marking done.
+            db.refresh(a)
+            if a.status != "cancelled":
+                a.status = "done"
         except Exception as e:  # noqa: BLE001 — surface any analyzer/loader error to the UI
+            db.refresh(a)
+            if a.status == "cancelled":
+                return
             a.status = "error"
             db.add(FindingRow(
                 analysis_id=a.id,
@@ -159,6 +169,25 @@ def rename_analysis(
     # Normalize empty strings to None so the frontend can fall back to "Analysis #N".
     name = (body.name or "").strip() or None
     a.name = name
+    db.commit()
+    db.refresh(a)
+    return a
+
+
+@router.post("/{analysis_id}/cancel", response_model=AnalysisOut)
+def cancel_analysis(analysis_id: int, db: Session = Depends(get_db)) -> Analysis:
+    """Cancel a pending or running analysis.
+
+    The background worker checks for 'cancelled' status before each analyzer,
+    so it will abort at the next checkpoint. Any findings already written are
+    kept so partial results remain visible.
+    """
+    a = db.get(Analysis, analysis_id)
+    if a is None:
+        raise HTTPException(404, "Not found")
+    if a.status not in ("pending", "running"):
+        raise HTTPException(409, f"Cannot cancel analysis with status '{a.status}'")
+    a.status = "cancelled"
     db.commit()
     db.refresh(a)
     return a

@@ -22,7 +22,7 @@ export interface Analysis {
   id: number;
   protocol_id: number;
   dataset_id: number;
-  status: "pending" | "running" | "done" | "error";
+  status: "pending" | "running" | "done" | "error" | "cancelled";
   name: string | null;
   created_at: string;
   findings: Finding[];
@@ -32,7 +32,7 @@ export interface AnalysisSummary {
   id: number;
   protocol_id: number;
   dataset_id: number;
-  status: "pending" | "running" | "done" | "error";
+  status: "pending" | "running" | "done" | "error" | "cancelled";
   name: string | null;
   created_at: string;
   study_id: string | null;

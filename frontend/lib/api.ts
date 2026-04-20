@@ -61,6 +61,10 @@ export const api = {
         body: JSON.stringify({ name }),
       }),
     ),
+  cancelAnalysis: async (id: number): Promise<Analysis> =>
+    json(
+      await fetch(`${BASE}/analyses/${id}/cancel`, { method: "POST" }),
+    ),
   generateDigest: async (analysisId: number): Promise<{ digest: string }> =>
     json(
       await fetch(`${BASE}/analyses/${analysisId}/digest`, { method: "POST" }),
