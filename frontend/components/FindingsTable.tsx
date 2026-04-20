@@ -259,6 +259,7 @@ export function FindingsTable({
           style={{ height: CONTAINER_HEIGHT, overflowY: "auto" }}
         >
           <div
+            className="min-w-[640px]"
             style={{
               height: virtualizer.getTotalSize(),
               width: "100%",
@@ -287,7 +288,7 @@ export function FindingsTable({
           </div>
         </div>
       ) : (
-        <div>
+        <div className="min-w-[640px]">
           {findings.map((f, idx) => (
             <FindingRow key={f.id} f={f} {...rowProps} highlighted={highlightedIndex === idx} />
           ))}

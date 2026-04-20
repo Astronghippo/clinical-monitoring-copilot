@@ -61,8 +61,8 @@ describe("ResponsiveLayout – FindingsTable", () => {
     const analyzerHeader = screen.getByText("Analyzer");
     const parent = analyzerHeader.parentElement;
     const hasHiddenClass =
-      analyzerHeader.className.includes("hidden") ||
-      (parent !== null && parent.className.includes("hidden"));
+      analyzerHeader.className.split(" ").includes("hidden") ||
+      (parent !== null && parent.className.split(" ").includes("hidden"));
     expect(hasHiddenClass).toBe(true);
   });
 
@@ -72,8 +72,8 @@ describe("ResponsiveLayout – FindingsTable", () => {
     const confidenceHeader = screen.getByText("Confidence");
     const parent = confidenceHeader.parentElement;
     const hasHiddenClass =
-      confidenceHeader.className.includes("hidden") ||
-      (parent !== null && parent.className.includes("hidden"));
+      confidenceHeader.className.split(" ").includes("hidden") ||
+      (parent !== null && parent.className.split(" ").includes("hidden"));
     expect(hasHiddenClass).toBe(true);
   });
 });
