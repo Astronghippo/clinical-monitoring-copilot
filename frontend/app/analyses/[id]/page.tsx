@@ -276,14 +276,15 @@ export default function AnalysisPage() {
   }
 
   async function handleCancel() {
-    if (cancelling) return;
+    if (!analysis || cancelling) return;
+    const id = analysis.id;
     setCancelling(true);
     try {
-      const updated = await api.cancelAnalysis(analysis.id);
+      const updated = await api.cancelAnalysis(id);
       setAnalysis((prev) => prev ? { ...prev, status: updated.status } : updated);
-    } catch {
+    } catch (_e) {
       // If the request fails (e.g. already done), just re-poll to get fresh state.
-      const fresh = await api.getAnalysis(analysis.id);
+      const fresh = await api.getAnalysis(id);
       setAnalysis(fresh);
     } finally {
       setCancelling(false);
