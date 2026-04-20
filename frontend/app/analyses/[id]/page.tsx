@@ -18,6 +18,7 @@ import { DigestPanel } from "@/components/DigestPanel";
 import { NLFilterBar } from "@/components/NLFilterBar";
 import type { NLFilters } from "@/components/NLFilterBar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { BulkLetterModal } from "@/components/BulkLetterModal";
 
 const SEVERITY_ORDER: Record<Severity, number> = { critical: 0, major: 1, minor: 2 };
 
@@ -89,6 +90,7 @@ export default function AnalysisPage() {
   const [subjectData, setSubjectData] = useState<SubjectDrilldown | null>(null);
   const [showAmendmentDiff, setShowAmendmentDiff] = useState(false);
   const [showDigest, setShowDigest] = useState(false);
+  const [showBulkLetters, setShowBulkLetters] = useState(false);
   const [minConfidence, setMinConfidence] = useState(0);
 
   useEffect(() => {
@@ -259,20 +261,7 @@ export default function AnalysisPage() {
   }
 
   async function bulkDraftLetters() {
-    if (!analysis) return;
-    const ids = Array.from(selectedIds);
-    const letters = await Promise.all(ids.map((id) => api.draftQueryLetter(id)));
-    const body = letters
-      .map((l) => `Subject: ${l.subject_line}\n\n${l.body}\n\nReply by: ${l.reply_by}`)
-      .join("\n\n=====\n\n");
-    const blob = new Blob([body], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `query-letters-analysis-${analysis.id}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-    clearSelection();
+    setShowBulkLetters(true);
   }
 
   return (
@@ -475,6 +464,17 @@ export default function AnalysisPage() {
           onClose={() => {
             setSelectedSubject(null);
             setSubjectData(null);
+          }}
+        />
+      )}
+
+      {/* Modal: Bulk letter drafting */}
+      {showBulkLetters && (
+        <BulkLetterModal
+          findingIds={Array.from(selectedIds)}
+          onClose={() => {
+            setShowBulkLetters(false);
+            clearSelection();
           }}
         />
       )}
