@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 import { Download } from "lucide-react";
 import type { AnalyzerKind, Severity, FindingStatus } from "@/lib/types";
 
@@ -16,6 +17,7 @@ interface Props {
   onToggleStatus: (s: FindingStatus) => void;
   minConfidence: number;
   onChangeMinConfidence: (v: number) => void;
+  searchInputRef?: React.RefObject<HTMLInputElement>;
 }
 
 const SEVERITY_BUTTON: Record<Severity, string> = {
@@ -38,6 +40,7 @@ export function FindingsFilterBar({
   onToggleStatus,
   minConfidence,
   onChangeMinConfidence,
+  searchInputRef,
 }: Props) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
@@ -142,6 +145,7 @@ export function FindingsFilterBar({
         {/* Search */}
         <div className="flex flex-1 items-center gap-2">
           <input
+            ref={searchInputRef}
             type="search"
             value={search}
             onChange={(e) => onChangeSearch(e.target.value)}

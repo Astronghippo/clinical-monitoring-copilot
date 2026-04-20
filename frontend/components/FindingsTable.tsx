@@ -30,6 +30,7 @@ interface Props {
   onToggleSelected?: (id: number) => void;
   onSubjectClick?: (subjectId: string) => void;
   analysisId?: number;
+  highlightedIndex?: number;
 }
 
 function FindingRow({
@@ -43,6 +44,7 @@ function FindingRow({
   copiedId,
   onCopyLink,
   style,
+  highlighted,
 }: {
   f: Finding;
   onSelect?: (f: Finding) => void;
@@ -54,12 +56,16 @@ function FindingRow({
   copiedId: number | null;
   onCopyLink: (e: React.MouseEvent, id: number) => void;
   style?: React.CSSProperties;
+  highlighted?: boolean;
 }) {
   return (
     <div
       data-testid={`finding-row-${f.id}`}
       style={style}
-      className="flex items-center cursor-pointer border-b border-slate-100 hover:bg-slate-50 text-sm"
+      className={clsx(
+        "flex items-center cursor-pointer border-b border-slate-100 hover:bg-slate-50 text-sm",
+        highlighted && "bg-blue-50 outline outline-2 outline-blue-400",
+      )}
       role="button"
       tabIndex={0}
       onClick={() => onSelect?.(f)}
@@ -177,6 +183,7 @@ export function FindingsTable({
   onToggleSelected,
   onSubjectClick,
   analysisId,
+  highlightedIndex,
 }: Props) {
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const parentRef = useRef<HTMLDivElement>(null);
@@ -253,6 +260,7 @@ export function FindingsTable({
                   key={finding.id}
                   f={finding}
                   {...rowProps}
+                  highlighted={highlightedIndex === virtualItem.index}
                   style={{
                     position: "absolute",
                     top: 0,
@@ -268,8 +276,8 @@ export function FindingsTable({
         </div>
       ) : (
         <div>
-          {findings.map((f) => (
-            <FindingRow key={f.id} f={f} {...rowProps} />
+          {findings.map((f, idx) => (
+            <FindingRow key={f.id} f={f} {...rowProps} highlighted={highlightedIndex === idx} />
           ))}
         </div>
       )}

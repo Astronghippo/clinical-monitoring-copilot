@@ -19,6 +19,7 @@ import { NLFilterBar } from "@/components/NLFilterBar";
 import type { NLFilters } from "@/components/NLFilterBar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { BulkLetterModal } from "@/components/BulkLetterModal";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
 const SEVERITY_ORDER: Record<Severity, number> = { critical: 0, major: 1, minor: 2 };
 
@@ -72,6 +73,8 @@ export default function AnalysisPage() {
   const [selected, setSelected] = useState<Finding | null>(null);
   const deepLinkOpened = useRef(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [keyboardIndex, setKeyboardIndex] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Filter state — persisted as URL query params would be nicer, but
   // component-local state is fine for now.
@@ -203,6 +206,17 @@ export default function AnalysisPage() {
     if (analysis) for (const f of analysis.findings) m.set(f.id, f);
     return m;
   }, [analysis]);
+
+  useKeyboardShortcuts({
+    findings: filtered,
+    selectedIndex: keyboardIndex,
+    onSelectIndex: setKeyboardIndex,
+    onOpenFinding: setSelected,
+    onExport: () => {
+      if (analysis) downloadCsv(filtered, analysis.id);
+    },
+    searchInputRef,
+  });
 
   if (!analysis) return <p className="text-slate-500">Loading…</p>;
 
@@ -388,6 +402,7 @@ export default function AnalysisPage() {
                 onToggleStatus={toggleStatus}
                 minConfidence={minConfidence}
                 onChangeMinConfidence={setMinConfidence}
+                searchInputRef={searchInputRef}
               />
             </>
           )}
@@ -451,6 +466,7 @@ export default function AnalysisPage() {
               onToggleSelected={toggleSelected}
               onSubjectClick={(subjectId) => setSelectedSubject(subjectId)}
               analysisId={analysis.id}
+              highlightedIndex={keyboardIndex}
             />
           )}
         </>
