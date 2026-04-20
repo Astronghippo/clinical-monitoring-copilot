@@ -4,6 +4,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { clsx } from "clsx";
 import type { Finding, FindingStatus, Severity, AnalyzerKind } from "@/lib/types";
 import { FindingStatusBadge } from "./FindingStatusBadge";
+import { Tooltip } from "./Tooltip";
 
 const SEV_STYLES: Record<Severity, string> = {
   critical: "bg-red-100 text-red-800",
@@ -90,14 +91,16 @@ function FindingRow({
         </div>
       )}
       <div className="px-3 py-2 w-24 flex-shrink-0">
-        <span
-          className={clsx(
-            "rounded px-2 py-0.5 text-xs font-medium",
-            SEV_STYLES[f.severity],
-          )}
-        >
-          {f.severity}
-        </span>
+        <Tooltip text="Severity level of this finding (Critical, High, Medium, Low)">
+          <span
+            className={clsx(
+              "rounded px-2 py-0.5 text-xs font-medium",
+              SEV_STYLES[f.severity],
+            )}
+          >
+            {f.severity}
+          </span>
+        </Tooltip>
       </div>
       <div className="px-3 py-2 w-32 flex-shrink-0 text-slate-600">
         {ANALYZER_LABEL[f.analyzer] ?? f.analyzer}
@@ -120,7 +123,9 @@ function FindingRow({
       </div>
       <div className="px-3 py-2 flex-1 min-w-0">{f.summary}</div>
       <div className="px-3 py-2 w-20 flex-shrink-0 text-slate-500">
-        {(f.confidence * 100).toFixed(0)}%
+        <Tooltip text="AI confidence score (0–100%). Higher is more certain.">
+          <span>{(f.confidence * 100).toFixed(0)}%</span>
+        </Tooltip>
       </div>
       {onStatusChange && (
         <div

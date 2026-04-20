@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Check, Copy, RefreshCw, Sparkles } from "lucide-react";
 import { api } from "@/lib/api";
+import { Tooltip } from "./Tooltip";
 
 interface Props {
   analysisId: number;
@@ -41,15 +42,17 @@ export function DigestPanel({ analysisId }: Props) {
     <div className="space-y-3">
       <div className="flex gap-2">
         {!digest ? (
-          <button
-            type="button"
-            onClick={generate}
-            disabled={loading}
-            className="inline-flex items-center gap-2 rounded border border-violet-200 bg-violet-50 px-3 py-1.5 text-sm font-medium text-violet-800 hover:bg-violet-100 disabled:opacity-50"
-          >
-            <Sparkles size={14} />
-            {loading ? "Generating…" : "Generate digest"}
-          </button>
+          <Tooltip text="Generate a weekly narrative summary of all findings using Claude AI">
+            <button
+              type="button"
+              onClick={generate}
+              disabled={loading}
+              className="inline-flex items-center gap-2 rounded border border-violet-200 bg-violet-50 px-3 py-1.5 text-sm font-medium text-violet-800 hover:bg-violet-100 disabled:opacity-50"
+            >
+              <Sparkles size={14} />
+              {loading ? "Generating…" : "Generate digest"}
+            </button>
+          </Tooltip>
         ) : (
           <>
             <button

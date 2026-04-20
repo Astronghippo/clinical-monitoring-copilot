@@ -2,6 +2,7 @@
 import React from "react";
 import { Download } from "lucide-react";
 import type { AnalyzerKind, Severity, FindingStatus } from "@/lib/types";
+import { Tooltip } from "./Tooltip";
 
 interface Props {
   severityFilter: Severity[];
@@ -170,6 +171,17 @@ export function FindingsFilterBar({
             <Download size={14} />
             Download CSV
           </button>
+          <Tooltip
+            text="j/k: next/prev row · Enter: open · e: export · /: search"
+            position="top"
+          >
+            <span
+              className="inline-flex h-5 w-5 cursor-default items-center justify-center rounded-full border border-slate-300 bg-slate-50 text-xs font-bold text-slate-500 hover:bg-slate-100"
+              aria-label="Keyboard shortcuts"
+            >
+              ?
+            </span>
+          </Tooltip>
         </div>
       </div>
     </div>

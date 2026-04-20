@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Search, Sparkles, X } from "lucide-react";
 import { api } from "@/lib/api";
+import { Tooltip } from "./Tooltip";
 
 export interface NLFilters {
   analyzer: string | null;
@@ -73,15 +74,17 @@ export function NLFilterBar({ analysisId, onFiltersApplied }: Props) {
             className="w-full rounded border border-slate-300 py-2 pl-8 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-violet-400"
           />
         </div>
-        <button
-          type="button"
-          onClick={submit}
-          disabled={loading || !query.trim()}
-          className="inline-flex items-center gap-2 rounded border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-800 hover:bg-violet-100 disabled:opacity-50"
-        >
-          <Sparkles size={13} />
-          {loading ? "Asking…" : "Ask Claude"}
-        </button>
+        <Tooltip text="Translate natural language to filters using Claude AI">
+          <button
+            type="button"
+            onClick={submit}
+            disabled={loading || !query.trim()}
+            className="inline-flex items-center gap-2 rounded border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-800 hover:bg-violet-100 disabled:opacity-50"
+          >
+            <Sparkles size={13} />
+            {loading ? "Asking…" : "Ask Claude"}
+          </button>
+        </Tooltip>
         {applied && (
           <button
             type="button"
