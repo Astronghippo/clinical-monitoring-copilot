@@ -17,15 +17,18 @@ const POSITION_CLASSES: Record<NonNullable<TooltipProps["position"]>, string> = 
 export function Tooltip({ text, children, position = "top" }: TooltipProps) {
   const id = useId();
 
+  const child = React.Children.only(children) as React.ReactElement;
+  const clonedChild = React.cloneElement(child, { 'aria-describedby': id });
+
   return (
-    <span className="relative group inline-flex" aria-describedby={id}>
-      {children}
+    <span className="relative group inline-flex">
+      {clonedChild}
       <span
         id={id}
         role="tooltip"
         className={[
           "absolute z-50 whitespace-nowrap rounded bg-slate-800 px-2 py-1 text-xs text-white shadow",
-          "opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none",
+          "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none",
           POSITION_CLASSES[position],
         ].join(" ")}
       >

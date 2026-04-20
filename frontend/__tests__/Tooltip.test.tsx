@@ -52,7 +52,19 @@ describe("Tooltip", () => {
     const tooltipId = tooltip.id;
     expect(tooltipId).toBeTruthy();
 
-    const wrapper = tooltip.parentElement;
-    expect(wrapper).toHaveAttribute("aria-describedby", tooltipId);
+    const button = screen.getByRole("button", { name: "Trigger" });
+    expect(button).toHaveAttribute("aria-describedby", tooltipId);
+  });
+
+  it("tooltip is visible when trigger is focused", () => {
+    render(
+      <Tooltip text="Focus tooltip">
+        <button>Focus me</button>
+      </Tooltip>
+    );
+    const button = screen.getByRole("button", { name: "Focus me" });
+    button.focus();
+    const tooltip = screen.getByRole("tooltip");
+    expect(tooltip.className).toContain("group-focus-within:opacity-100");
   });
 });
