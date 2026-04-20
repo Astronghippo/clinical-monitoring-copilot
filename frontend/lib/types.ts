@@ -140,6 +140,15 @@ export interface AuditEvent {
   created_at: string;
 }
 
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface ChatReply {
+  reply: string;
+}
+
 export interface AmendmentDiff {
   added_visits: string[];
   removed_visits: string[];

@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
-import { Check, Copy, Mail, X } from "lucide-react";
+import { Check, Copy, Mail, MessageCircle, X } from "lucide-react";
 import { api } from "@/lib/api";
+import { FindingChat } from "./FindingChat";
 import { FindingStatusBadge } from "./FindingStatusBadge";
 import type { Finding, QueryLetter } from "@/lib/types";
 
@@ -15,6 +16,7 @@ export function FindingDetail({ finding, onClose }: Props) {
   const [drafting, setDrafting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showChat, setShowChat] = useState(false);
 
   async function handleDraft() {
     setDrafting(true);
@@ -98,7 +100,24 @@ export function FindingDetail({ finding, onClose }: Props) {
         </div>
       </section>
 
-      <section className="mt-5 border-t border-slate-100 pt-4">
+      {/* AI Chat panel */}
+      <section className="mt-4 border-t border-slate-100 pt-4">
+        <button
+          type="button"
+          onClick={() => setShowChat((v) => !v)}
+          className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700"
+        >
+          <MessageCircle size={15} />
+          {showChat ? "Hide AI chat" : "Ask Claude about this finding"}
+        </button>
+        {showChat && (
+          <div className="mt-3">
+            <FindingChat finding={finding} />
+          </div>
+        )}
+      </section>
+
+      <section className="mt-4 border-t border-slate-100 pt-4">
         {!letter && (
           <button
             type="button"

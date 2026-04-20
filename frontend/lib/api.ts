@@ -3,6 +3,8 @@ import type {
   Analysis,
   AnalysisSummary,
   AuditEvent,
+  ChatMessage,
+  ChatReply,
   Dataset,
   Finding,
   FindingGroup,
@@ -97,6 +99,18 @@ export const api = {
     subjectId: string,
   ): Promise<SubjectDrilldown> =>
     json(await fetch(`${BASE}/analyses/${analysisId}/subjects/${encodeURIComponent(subjectId)}`)),
+  chatFinding: async (
+    findingId: number,
+    message: string,
+    history: ChatMessage[],
+  ): Promise<ChatReply> =>
+    json(
+      await fetch(`${BASE}/findings/${findingId}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message, history }),
+      }),
+    ),
   checkAmendment: async (analysisId: number, file: File): Promise<AmendmentDiff> => {
     const form = new FormData();
     form.append("file", file);

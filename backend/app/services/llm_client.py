@@ -141,3 +141,23 @@ class LLMClient:
         max_tokens: int = 2048,
     ) -> str:
         return self._call(system=system, user=user, max_tokens=max_tokens)
+
+    def chat_completion(
+        self,
+        *,
+        system: str,
+        messages: list[dict],
+        max_tokens: int = 1024,
+    ) -> str:
+        """Multi-turn chat completion.
+
+        `messages` is a list of ``{"role": "user"|"assistant", "content": "…"}``
+        dicts.  Returns the assistant's reply as a plain string.
+        """
+        msg = self._client.messages.create(
+            model=self._model,
+            max_tokens=max_tokens,
+            system=system,
+            messages=messages,
+        )
+        return msg.content[0].text

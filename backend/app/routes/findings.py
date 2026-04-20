@@ -10,8 +10,12 @@ from app.models import Analysis, Dataset, FindingRow, Protocol
 from app.schemas import FindingOut, FindingStatusUpdate, FindingBulkStatusUpdate
 from app.services import audit as audit_service
 from app.services.dataset_loader import load_dataset
+from app.services.finding_chat import chat_with_finding
+from app.services.llm_client import LLMClient
 from app.services.query_letter import draft_query_letter
 
+# Module-level LLM instance so tests can monkeypatch it.
+_chat_llm: LLMClient | None = None
 
 router = APIRouter(prefix="/findings", tags=["findings"])
 
@@ -20,6 +24,20 @@ class QueryLetterOut(BaseModel):
     subject_line: str
     body: str
     reply_by: str
+
+
+class ChatMessage(BaseModel):
+    role: str  # "user" | "assistant"
+    content: str
+
+
+class ChatIn(BaseModel):
+    message: str
+    history: list[ChatMessage] = []
+
+
+class ChatOut(BaseModel):
+    reply: str
 
 
 @router.get("/{finding_id}", response_model=FindingOut)
@@ -110,3 +128,33 @@ def generate_query_letter(
         },
     )
     return QueryLetterOut(**letter)
+
+
+@router.post("/{finding_id}/chat", response_model=ChatOut)
+def chat_finding(
+    finding_id: int,
+    body: ChatIn,
+    db: Session = Depends(get_db),
+) -> ChatOut:
+    """Ask a question about a specific finding; Claude replies with deeper analysis."""
+    finding = db.get(FindingRow, finding_id)
+    if finding is None:
+        raise HTTPException(404, "Finding not found")
+
+    reply = chat_with_finding(
+        finding={
+            "id": finding.id,
+            "analyzer": finding.analyzer,
+            "severity": finding.severity,
+            "subject_id": finding.subject_id,
+            "summary": finding.summary,
+            "detail": finding.detail,
+            "protocol_citation": finding.protocol_citation,
+            "data_citation": finding.data_citation,
+            "confidence": finding.confidence,
+        },
+        message=body.message,
+        history=[{"role": m.role, "content": m.content} for m in body.history],
+        llm=_chat_llm,
+    )
+    return ChatOut(reply=reply)
