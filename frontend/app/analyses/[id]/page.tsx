@@ -1,6 +1,6 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import type { Analysis, AnalyzerKind, Finding, FindingGroup, Severity, FindingStatus, SiteRollup, SubjectDrilldown } from "@/lib/types";
@@ -66,8 +66,10 @@ function downloadCsv(findings: Finding[], analysisId: number) {
 
 export default function AnalysisPage() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [selected, setSelected] = useState<Finding | null>(null);
+  const deepLinkOpened = useRef(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   // Filter state — persisted as URL query params would be nicer, but
@@ -155,6 +157,20 @@ export default function AnalysisPage() {
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [showAmendmentDiff]);
+
+  // Deep-link: open a specific finding on mount when ?finding=N is present.
+  useEffect(() => {
+    if (deepLinkOpened.current) return;
+    if (!analysis) return;
+    const findingParam = searchParams.get("finding");
+    if (!findingParam) return;
+    const findingId = Number(findingParam);
+    const finding = analysis.findings.find((f) => f.id === findingId);
+    if (finding) {
+      setSelected(finding);
+      deepLinkOpened.current = true;
+    }
+  }, [analysis, searchParams]);
 
   const filtered = useMemo(() => {
     if (!analysis) return [];
@@ -445,6 +461,7 @@ export default function AnalysisPage() {
               selectedIds={selectedIds}
               onToggleSelected={toggleSelected}
               onSubjectClick={(subjectId) => setSelectedSubject(subjectId)}
+              analysisId={analysis.id}
             />
           )}
         </>

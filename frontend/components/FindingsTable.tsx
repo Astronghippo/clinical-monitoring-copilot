@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { clsx } from "clsx";
 import type { Finding, FindingStatus } from "@/lib/types";
 import { FindingStatusBadge } from "./FindingStatusBadge";
@@ -24,6 +24,7 @@ interface Props {
   selectedIds?: Set<number>;
   onToggleSelected?: (id: number) => void;
   onSubjectClick?: (subjectId: string) => void;
+  analysisId?: number;
 }
 
 export function FindingsTable({
@@ -33,7 +34,18 @@ export function FindingsTable({
   selectedIds,
   onToggleSelected,
   onSubjectClick,
+  analysisId,
 }: Props) {
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+
+  function handleCopyLink(e: React.MouseEvent, findingId: number) {
+    e.stopPropagation();
+    const url = `${window.location.origin}/analyses/${analysisId}?finding=${findingId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedId(findingId);
+      setTimeout(() => setCopiedId(null), 1500);
+    });
+  }
   if (findings.length === 0) {
     return <p className="text-slate-500">No findings match the current filters.</p>;
   }
@@ -49,6 +61,7 @@ export function FindingsTable({
             <th className="px-3 py-2">Finding</th>
             <th className="px-3 py-2">Confidence</th>
             {onStatusChange && <th className="px-3 py-2">Status</th>}
+            {analysisId !== undefined && <th className="px-3 py-2 w-10"></th>}
           </tr>
         </thead>
         <tbody>
@@ -108,6 +121,18 @@ export function FindingsTable({
                     value={f.status}
                     onChange={(next) => onStatusChange(f.id, next)}
                   />
+                </td>
+              )}
+              {analysisId !== undefined && (
+                <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    aria-label="Copy link to finding"
+                    className="text-slate-400 hover:text-slate-700 text-xs px-1"
+                    onClick={(e) => handleCopyLink(e, f.id)}
+                  >
+                    {copiedId === f.id ? "✓" : "🔗"}
+                  </button>
                 </td>
               )}
             </tr>

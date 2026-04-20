@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { FindingsTable } from "../components/FindingsTable";
 import type { Finding } from "../lib/types";
 
@@ -50,5 +50,83 @@ describe("FindingsTable", () => {
   it("shows confidence as percent", () => {
     render(<FindingsTable findings={[f({ confidence: 0.85 })]} />);
     expect(screen.getByText("85%")).toBeInTheDocument();
+  });
+});
+
+describe("FindingsTable – copy link button", () => {
+  let writeText: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      writable: true,
+      configurable: true,
+    });
+    // Provide a stable origin so we can assert the URL
+    Object.defineProperty(window, "location", {
+      value: { ...window.location, origin: "https://example.com" },
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("renders a copy-link button for each row when analysisId is provided", () => {
+    render(
+      <FindingsTable
+        findings={[f({ id: 7 }), f({ id: 8 })]}
+        analysisId={5}
+      />,
+    );
+    const buttons = screen.getAllByRole("button", { name: /copy link to finding/i });
+    expect(buttons).toHaveLength(2);
+  });
+
+  it("does not render copy-link buttons when analysisId is omitted", () => {
+    render(<FindingsTable findings={[f({ id: 7 })]} />);
+    expect(
+      screen.queryByRole("button", { name: /copy link to finding/i }),
+    ).toBeNull();
+  });
+
+  it("copies the correct URL to clipboard on click", async () => {
+    render(
+      <FindingsTable
+        findings={[f({ id: 42 })]}
+        analysisId={5}
+      />,
+    );
+    const btn = screen.getByRole("button", { name: /copy link to finding/i });
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+    expect(writeText).toHaveBeenCalledWith(
+      "https://example.com/analyses/5?finding=42",
+    );
+  });
+
+  it("shows a ✓ confirmation after copying that disappears after 1.5 s", async () => {
+    vi.useFakeTimers();
+    render(
+      <FindingsTable
+        findings={[f({ id: 42 })]}
+        analysisId={5}
+      />,
+    );
+    const btn = screen.getByRole("button", { name: /copy link to finding/i });
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+    // Confirmation tick should be visible immediately after click
+    expect(screen.getByText("✓")).toBeInTheDocument();
+    // After 1.5 s it should disappear
+    act(() => {
+      vi.advanceTimersByTime(1500);
+    });
+    expect(screen.queryByText("✓")).toBeNull();
   });
 });
