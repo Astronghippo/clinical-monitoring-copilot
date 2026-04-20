@@ -86,6 +86,7 @@ export default function AnalysisPage() {
   const [subjectData, setSubjectData] = useState<SubjectDrilldown | null>(null);
   const [showAmendmentDiff, setShowAmendmentDiff] = useState(false);
   const [showDigest, setShowDigest] = useState(false);
+  const [minConfidence, setMinConfidence] = useState(0);
 
   useEffect(() => {
     if (activeTab === "grouped" && analysis && groups === null) {
@@ -161,6 +162,7 @@ export default function AnalysisPage() {
       if (!severityFilter.includes(f.severity)) return false;
       if (analyzerFilter !== "all" && f.analyzer !== analyzerFilter) return false;
       if (!statusFilter.includes(f.status)) return false;
+      if (f.confidence < minConfidence) return false;
       if (
         q &&
         !f.subject_id.toLowerCase().includes(q) &&
@@ -175,7 +177,7 @@ export default function AnalysisPage() {
         a.subject_id.localeCompare(b.subject_id),
     );
     return sorted;
-  }, [analysis, severityFilter, analyzerFilter, search, statusFilter]);
+  }, [analysis, severityFilter, analyzerFilter, search, statusFilter, minConfidence]);
 
   const findingsById = useMemo(() => {
     const m = new Map<number, Finding>();
@@ -370,6 +372,8 @@ export default function AnalysisPage() {
                 onExportCsv={() => downloadCsv(filtered, analysis.id)}
                 statusFilter={statusFilter}
                 onToggleStatus={toggleStatus}
+                minConfidence={minConfidence}
+                onChangeMinConfidence={setMinConfidence}
               />
             </>
           )}

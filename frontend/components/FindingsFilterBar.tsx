@@ -14,6 +14,8 @@ interface Props {
   onExportCsv: () => void;
   statusFilter: FindingStatus[];
   onToggleStatus: (s: FindingStatus) => void;
+  minConfidence: number;
+  onChangeMinConfidence: (v: number) => void;
 }
 
 const SEVERITY_BUTTON: Record<Severity, string> = {
@@ -34,6 +36,8 @@ export function FindingsFilterBar({
   onExportCsv,
   statusFilter,
   onToggleStatus,
+  minConfidence,
+  onChangeMinConfidence,
 }: Props) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
@@ -107,6 +111,31 @@ export function FindingsFilterBar({
             <option value="completeness">Completeness</option>
             <option value="eligibility">Eligibility</option>
           </select>
+        </div>
+
+        {/* Confidence slider */}
+        <div className="flex items-center gap-2">
+          <label
+            htmlFor="confidence-slider"
+            className="text-xs font-semibold uppercase tracking-wide text-slate-500"
+          >
+            Confidence:
+          </label>
+          <input
+            id="confidence-slider"
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={minConfidence}
+            onChange={(e) => onChangeMinConfidence(parseFloat(e.target.value))}
+            className="w-24 accent-slate-600"
+          />
+          <span className="text-xs text-slate-600">
+            {minConfidence === 0
+              ? "All confidence"
+              : `≥ ${Math.round(minConfidence * 100)}%`}
+          </span>
         </div>
 
         {/* Search */}
