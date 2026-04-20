@@ -228,6 +228,8 @@ export function FindingsTable({
         clearTimeout(copyTimerRef.current);
       }
       copyTimerRef.current = setTimeout(() => setCopiedId(null), 1500);
+    }).catch(() => {
+      // silently ignore clipboard permission denied
     });
   }
 

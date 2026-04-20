@@ -116,10 +116,13 @@ def patch_protocol_spec(
     p = db.get(Protocol, protocol_id)
     if p is None:
         raise HTTPException(404, "Protocol not found")
+    if p.parse_status == "parsing":
+        raise HTTPException(status_code=409, detail="Protocol is still being parsed; retry after parse completes")
     try:
-        ProtocolSpec.model_validate(body.spec_json)
+        validated_spec = ProtocolSpec.model_validate(body.spec_json)
     except ValidationError as exc:
         raise HTTPException(422, detail=str(exc)) from exc
+    p.study_id = validated_spec.study_id
     p.spec_json = body.spec_json
     db.commit()
     db.refresh(p)

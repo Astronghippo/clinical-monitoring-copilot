@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, type RefObject } from "react";
 import type { Finding } from "@/lib/types";
 
 interface UseKeyboardShortcutsOptions {
@@ -7,7 +7,7 @@ interface UseKeyboardShortcutsOptions {
   onSelectIndex: (index: number) => void;
   onOpenFinding: (finding: Finding) => void;
   onExport: () => void;
-  searchInputRef: React.RefObject<HTMLInputElement>;
+  searchInputRef: RefObject<HTMLInputElement>;
 }
 
 const GUARDED_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT"]);

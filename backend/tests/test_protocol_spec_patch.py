@@ -93,3 +93,50 @@ def test_patch_spec_invalid_visit_structure(client_with_sqlite):
         json={"spec_json": bad_spec},
     )
     assert r.status_code == 422, r.text
+
+
+def test_patch_spec_rejected_during_parse(client_with_sqlite):
+    """PATCH /protocols/{id}/spec returns 409 when parse_status is 'parsing'."""
+    from app.db import SessionLocal
+    from app.models import Protocol
+
+    client = client_with_sqlite
+
+    # Create a protocol directly with parse_status="parsing" to simulate an
+    # in-progress parse.
+    with patch("app.routes.protocols.extract_text_from_pdf_bytes", return_value="fake text"), \
+         patch("app.routes.protocols._parse_in_background"):  # prevent background task from running
+        r = client.post(
+            "/protocols",
+            files={"file": ("test.pdf", b"%PDF-1.4\n", "application/pdf")},
+        )
+        assert r.status_code == 200, r.text
+        protocol_id = r.json()["id"]
+
+    # The freshly uploaded protocol starts with parse_status="parsing".
+    # Attempting a PATCH now should yield 409.
+    r = client.patch(
+        f"/protocols/{protocol_id}/spec",
+        json={"spec_json": _fake_spec_dict()},
+    )
+    assert r.status_code == 409, r.text
+    assert "parse" in r.json()["detail"].lower()
+
+
+def test_patch_spec_syncs_study_id(client_with_sqlite):
+    """PATCH /protocols/{id}/spec updates the top-level study_id on the Protocol row."""
+    client = client_with_sqlite
+    protocol_id = _create_protocol(client)
+
+    new_spec = _fake_spec_dict()
+    new_spec["study_id"] = "NEW-STUDY-999"
+
+    r = client.patch(
+        f"/protocols/{protocol_id}/spec",
+        json={"spec_json": new_spec},
+    )
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert data["study_id"] == "NEW-STUDY-999", (
+        "top-level study_id must be synced from spec after PATCH"
+    )
