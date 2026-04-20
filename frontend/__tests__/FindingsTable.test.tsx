@@ -53,6 +53,44 @@ describe("FindingsTable", () => {
   });
 });
 
+describe("FindingsTable – virtualization", () => {
+  it("does not render all 100 rows when given 100 findings (virtualization active)", () => {
+    // Mock offsetHeight so the virtualizer sees a 600px container in jsdom
+    Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
+      configurable: true,
+      get() {
+        return 600;
+      },
+    });
+
+    const manyFindings = Array.from({ length: 100 }, (_, i) =>
+      f({ id: i + 1, subject_id: `subj-${i + 1}` }),
+    );
+    render(<FindingsTable findings={manyFindings} />);
+    // With virtualization, only a window of rows is rendered — far fewer than 100
+    const rows = document.querySelectorAll("[data-testid^='finding-row-']");
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.length).toBeLessThan(100);
+
+    // Restore
+    Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
+      configurable: true,
+      get() {
+        return 0;
+      },
+    });
+  });
+
+  it("renders all rows when given 5 findings (small lists show everything)", () => {
+    const fewFindings = Array.from({ length: 5 }, (_, i) =>
+      f({ id: i + 1, subject_id: `subj-${i + 1}` }),
+    );
+    render(<FindingsTable findings={fewFindings} />);
+    const rows = document.querySelectorAll("[data-testid^='finding-row-']");
+    expect(rows.length).toBe(5);
+  });
+});
+
 describe("FindingsTable – copy link button", () => {
   let writeText: ReturnType<typeof vi.fn>;
 
