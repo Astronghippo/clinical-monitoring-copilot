@@ -27,3 +27,4 @@ data/sample_protocol.pdf
 
 # Worktrees
 .worktrees/
+frontend/node_modules
