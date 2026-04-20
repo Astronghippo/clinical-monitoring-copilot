@@ -64,6 +64,22 @@ export const api = {
     json(
       await fetch(`${BASE}/analyses/${analysisId}/digest`, { method: "POST" }),
     ),
+  nlFilter: async (
+    analysisId: number,
+    query: string,
+  ): Promise<{
+    analyzer: string | null;
+    severity: string[] | null;
+    status: string[] | null;
+    search_text: string | null;
+  }> =>
+    json(
+      await fetch(`${BASE}/analyses/${analysisId}/nl-filter`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      }),
+    ),
   draftQueryLetter: async (findingId: number): Promise<QueryLetter> =>
     json(
       await fetch(`${BASE}/findings/${findingId}/query-letter`, {

@@ -15,6 +15,8 @@ import { BulkActionsBar } from "@/components/BulkActionsBar";
 import { SubjectPanel } from "@/components/SubjectPanel";
 import { AmendmentDiff } from "@/components/AmendmentDiff";
 import { DigestPanel } from "@/components/DigestPanel";
+import { NLFilterBar } from "@/components/NLFilterBar";
+import type { NLFilters } from "@/components/NLFilterBar";
 
 const SEVERITY_ORDER: Record<Severity, number> = { critical: 0, major: 1, minor: 2 };
 
@@ -343,6 +345,19 @@ export default function AnalysisPage() {
                   <DigestPanel analysisId={analysis.id} />
                 </div>
               )}
+              <div className="mb-3">
+                <NLFilterBar
+                  analysisId={analysis.id}
+                  onFiltersApplied={(f: NLFilters) => {
+                    if (f.analyzer) setAnalyzerFilter(f.analyzer as typeof analyzerFilter);
+                    else setAnalyzerFilter("all");
+                    if (f.severity) setSeverityFilter(f.severity as Severity[]);
+                    else setSeverityFilter(["critical", "major", "minor"]);
+                    if (f.search_text) setSearch(f.search_text);
+                    else setSearch("");
+                  }}
+                />
+              </div>
               <FindingsFilterBar
                 severityFilter={severityFilter}
                 onToggleSeverity={toggleSeverity}

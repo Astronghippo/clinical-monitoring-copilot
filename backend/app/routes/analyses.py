@@ -26,10 +26,12 @@ from app.services.protocol_parser import (
 )
 from app.services.digest import draft_digest
 from app.services.llm_client import LLMClient
+from app.services.nl_filter import translate_query_to_filters
 from app.services.report_pdf import render_analysis_pdf
 
 # Module-level LLM instances so tests can monkeypatch them.
 _digest_llm: LLMClient | None = None
+_nl_filter_llm: LLMClient | None = None
 
 router = APIRouter(prefix="/analyses", tags=["analyses"])
 
@@ -499,3 +501,29 @@ def generate_digest(
 
     text = draft_digest(study_id=study_id, findings=findings_data, llm=_digest_llm)
     return DigestOut(digest=text)
+
+
+class NLFilterIn(BaseModel):
+    query: str
+
+
+class NLFilterOut(BaseModel):
+    analyzer: str | None = None
+    severity: list[str] | None = None
+    status: list[str] | None = None
+    search_text: str | None = None
+
+
+@router.post("/{analysis_id}/nl-filter", response_model=NLFilterOut)
+def nl_filter(
+    analysis_id: int,
+    body: NLFilterIn,
+    db: Session = Depends(get_db),
+) -> NLFilterOut:
+    """Translate a natural-language query into structured filter params."""
+    analysis = db.get(Analysis, analysis_id)
+    if analysis is None:
+        raise HTTPException(404, "Analysis not found")
+
+    filters = translate_query_to_filters(query=body.query, llm=_nl_filter_llm)
+    return NLFilterOut(**filters)
