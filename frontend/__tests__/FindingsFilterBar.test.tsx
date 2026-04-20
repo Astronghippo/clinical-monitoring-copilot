@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { FindingsFilterBar } from "../components/FindingsFilterBar";
@@ -20,6 +20,8 @@ const defaultProps = {
 };
 
 describe("FindingsFilterBar – confidence slider (D4)", () => {
+  beforeEach(() => vi.clearAllMocks());
+
   it('shows "All confidence" label when minConfidence is 0', () => {
     render(<FindingsFilterBar {...defaultProps} minConfidence={0} />);
     expect(screen.getByText("All confidence")).toBeInTheDocument();

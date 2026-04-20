@@ -110,6 +110,7 @@ export function FindingsFilterBar({
             <option value="visit_windows">Visit window</option>
             <option value="completeness">Completeness</option>
             <option value="eligibility">Eligibility</option>
+            <option value="plausibility">Plausibility</option>
           </select>
         </div>
 
@@ -132,7 +133,7 @@ export function FindingsFilterBar({
             className="w-24 accent-slate-600"
           />
           <span className="text-xs text-slate-600">
-            {minConfidence === 0
+            {minConfidence < 0.005
               ? "All confidence"
               : `≥ ${Math.round(minConfidence * 100)}%`}
           </span>
