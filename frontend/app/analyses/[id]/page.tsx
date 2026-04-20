@@ -279,7 +279,7 @@ export default function AnalysisPage() {
   }
 
   return (
-    <main className="space-y-6">
+    <main className="space-y-6 dark:bg-gray-900 dark:text-white">
       <Breadcrumbs
         items={[
           { label: "Home", href: "/" },

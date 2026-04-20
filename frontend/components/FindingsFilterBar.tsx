@@ -43,7 +43,7 @@ export function FindingsFilterBar({
   searchInputRef,
 }: Props) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+    <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-gray-600 dark:bg-gray-800">
       <div className="flex flex-wrap items-center gap-3">
         {/* Severity toggle chips */}
         <div className="flex items-center gap-1.5">
@@ -107,7 +107,7 @@ export function FindingsFilterBar({
             onChange={(e) =>
               onChangeAnalyzer(e.target.value as AnalyzerKind | "all")
             }
-            className="rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700"
+            className="rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
           >
             <option value="all">All</option>
             <option value="visit_windows">Visit window</option>
@@ -150,7 +150,7 @@ export function FindingsFilterBar({
             value={search}
             onChange={(e) => onChangeSearch(e.target.value)}
             placeholder="Search subject ID or finding text…"
-            className="w-full min-w-[200px] rounded border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 placeholder-slate-400"
+            className="w-full min-w-[200px] rounded border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 placeholder-slate-400 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400"
           />
         </div>
 

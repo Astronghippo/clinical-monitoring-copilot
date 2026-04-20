@@ -63,7 +63,7 @@ function FindingRow({
       data-testid={`finding-row-${f.id}`}
       style={style}
       className={clsx(
-        "flex items-center cursor-pointer border-b border-slate-100 hover:bg-slate-50 text-sm",
+        "flex items-center cursor-pointer border-b border-slate-100 hover:bg-slate-50 text-sm dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700",
         highlighted && "bg-blue-50 outline outline-2 outline-blue-400",
       )}
       role="button"
@@ -162,7 +162,7 @@ function TableHeader({
   analysisId?: number;
 }) {
   return (
-    <div className="flex items-center bg-slate-50 text-left text-slate-600 text-sm font-medium border-b border-slate-200">
+    <div className="flex items-center bg-slate-50 text-left text-slate-600 text-sm font-medium border-b border-slate-200 dark:bg-gray-900 dark:text-gray-300 dark:border-gray-700">
       {onToggleSelected && <div className="px-3 py-2 w-10 flex-shrink-0"><span aria-label="Select">✓</span></div>}
       <div className="px-3 py-2 w-24 flex-shrink-0">Severity</div>
       <div className="px-3 py-2 w-32 flex-shrink-0">Analyzer</div>
@@ -242,7 +242,7 @@ export function FindingsTable({
   };
 
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
       <TableHeader
         onToggleSelected={onToggleSelected}
         onStatusChange={onStatusChange}
