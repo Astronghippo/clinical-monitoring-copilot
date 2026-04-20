@@ -8,12 +8,14 @@ back into the Protocol row. The frontend polls GET /protocols/{id} until
 from __future__ import annotations
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
+from pydantic import BaseModel, ValidationError
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal, get_db
 from app.models import Protocol
 from app.schemas import ProtocolOut
 from app.services.protocol_parser import (
+    ProtocolSpec,
     extract_text_from_pdf_bytes,
     parse_protocol_text,
 )
@@ -21,6 +23,10 @@ from app.services.protocol_summary import summarize_protocol_text
 
 
 router = APIRouter(prefix="/protocols", tags=["protocols"])
+
+
+class SpecPatch(BaseModel):
+    spec_json: dict
 
 
 def _parse_in_background(protocol_id: int) -> None:
@@ -99,3 +105,22 @@ def get_protocol(protocol_id: int, db: Session = Depends(get_db)) -> Protocol:
 @router.get("", response_model=list[ProtocolOut])
 def list_protocols(db: Session = Depends(get_db)) -> list[Protocol]:
     return db.query(Protocol).order_by(Protocol.id.desc()).all()
+
+
+@router.patch("/{protocol_id}/spec", response_model=ProtocolOut)
+def patch_protocol_spec(
+    protocol_id: int,
+    body: SpecPatch,
+    db: Session = Depends(get_db),
+) -> Protocol:
+    p = db.get(Protocol, protocol_id)
+    if p is None:
+        raise HTTPException(404, "Protocol not found")
+    try:
+        ProtocolSpec.model_validate(body.spec_json)
+    except ValidationError as exc:
+        raise HTTPException(422, detail=str(exc)) from exc
+    p.spec_json = body.spec_json
+    db.commit()
+    db.refresh(p)
+    return p

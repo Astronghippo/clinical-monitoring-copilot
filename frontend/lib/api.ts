@@ -10,6 +10,7 @@ import type {
   FindingGroup,
   FindingStatus,
   Protocol,
+  ProtocolSpec,
   QueryLetter,
   SiteRollup,
   SubjectDrilldown,
@@ -131,6 +132,12 @@ export const api = {
         body: JSON.stringify({ message, history }),
       }),
     ),
+  patchProtocolSpec: async (protocolId: number, spec: ProtocolSpec): Promise<Protocol> =>
+    json(await fetch(`${BASE}/protocols/${protocolId}/spec`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ spec_json: spec }),
+    })),
   checkAmendment: async (analysisId: number, file: File): Promise<AmendmentDiff> => {
     const form = new FormData();
     form.append("file", file);

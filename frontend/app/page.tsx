@@ -48,7 +48,9 @@ export default function Home() {
           {protocol.summary_json && (
             <ProtocolOverviewCard overview={protocol.summary_json} />
           )}
-          {protocol.spec_json && <ProtocolSummary spec={protocol.spec_json} />}
+          {protocol.spec_json && (
+            <ProtocolSummary spec={protocol.spec_json} protocolId={protocol.id} />
+          )}
         </>
       )}
       <DatasetUploader onUploaded={setDataset} />
