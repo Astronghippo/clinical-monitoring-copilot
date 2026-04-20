@@ -115,6 +115,32 @@ def extract_relevant_excerpt(text: str, max_chars: int = _MAX_FULL_CHARS) -> str
     return excerpt
 
 
+# Minimum extracted-text length that counts as a "good" pypdf extraction.
+# Below this we assume the PDF is scanned or has complex layout and fall back
+# to Claude Vision.
+_MIN_VISION_FALLBACK_CHARS = 500
+
+
+def parse_protocol_pdf_bytes(
+    pdf_bytes: bytes,
+    *,
+    llm: LLMClient | None = None,
+    vision_llm: LLMClient | None = None,
+) -> ProtocolSpec:
+    """Parse a protocol PDF, falling back to Claude Vision when pypdf is sparse.
+
+    Steps:
+    1. Extract text with pypdf.
+    2. If len(text) < _MIN_VISION_FALLBACK_CHARS and vision_llm is provided,
+       call vision_llm.pdf_text_extraction(pdf_bytes) to obtain richer text.
+    3. Parse via the normal parse_protocol_text() path.
+    """
+    text = extract_text_from_pdf_bytes(pdf_bytes)
+    if len(text.strip()) < _MIN_VISION_FALLBACK_CHARS and vision_llm is not None:
+        text = vision_llm.pdf_text_extraction(pdf_bytes)
+    return parse_protocol_text(text, llm=llm)
+
+
 def parse_protocol_text(text: str, *, llm: LLMClient | None = None) -> ProtocolSpec:
     """Ask the LLM to extract a structured ProtocolSpec from raw protocol text.
 

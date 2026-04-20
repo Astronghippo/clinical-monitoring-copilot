@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import re
 from typing import Any
@@ -159,5 +160,46 @@ class LLMClient:
             max_tokens=max_tokens,
             system=system,
             messages=messages,
+        )
+        return msg.content[0].text
+
+    def pdf_text_extraction(
+        self,
+        pdf_bytes: bytes,
+        max_tokens: int = 4096,
+    ) -> str:
+        """Extract text from a PDF using Claude's native document understanding.
+
+        Sends the raw PDF bytes as a base64-encoded document content block.
+        Useful as a fallback when pypdf produces sparse output (e.g., scanned
+        PDFs, complex tables, or flowcharts).
+        """
+        encoded = base64.standard_b64encode(pdf_bytes).decode("utf-8")
+        msg = self._client.messages.create(
+            model=self._model,
+            max_tokens=max_tokens,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "document",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "application/pdf",
+                                "data": encoded,
+                            },
+                        },
+                        {
+                            "type": "text",
+                            "text": (
+                                "Extract all text from this document as faithfully as possible. "
+                                "Preserve table structure using plain-text alignment. "
+                                "Do not summarise — output the full text content."
+                            ),
+                        },
+                    ],
+                }
+            ],
         )
         return msg.content[0].text
