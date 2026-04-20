@@ -26,6 +26,9 @@ export function useKeyboardShortcuts({
       const tagName = target?.tagName ?? "";
       const isInField = GUARDED_TAGS.has(tagName);
 
+      // Ignore all shortcuts when a modifier key is held
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+
       // "/" should focus search even when focus is in another field
       if (event.key === "/") {
         event.preventDefault();
@@ -58,6 +61,7 @@ export function useKeyboardShortcuts({
           break;
         }
         case "e": {
+          event.preventDefault();
           onExport();
           break;
         }

@@ -22,8 +22,12 @@ function makeFinding(id: number): Finding {
   };
 }
 
-function fireKey(key: string, target?: EventTarget) {
-  const event = new KeyboardEvent("keydown", { key, bubbles: true });
+function fireKey(
+  key: string,
+  target?: EventTarget,
+  modifiers?: { ctrlKey?: boolean; metaKey?: boolean; altKey?: boolean },
+) {
+  const event = new KeyboardEvent("keydown", { key, bubbles: true, ...modifiers });
   if (target) {
     Object.defineProperty(event, "target", { value: target });
   }
@@ -255,6 +259,74 @@ describe("useKeyboardShortcuts", () => {
     expect(focusSpy).toHaveBeenCalledTimes(1);
     document.body.removeChild(input);
     document.body.removeChild(searchInput);
+  });
+
+  it("does not fire j shortcut when ctrlKey is held", () => {
+    renderHook(() =>
+      useKeyboardShortcuts({
+        findings,
+        selectedIndex: 0,
+        onSelectIndex,
+        onOpenFinding,
+        onExport,
+        searchInputRef: { current: null },
+      }),
+    );
+
+    fireKey("j", undefined, { ctrlKey: true });
+    expect(onSelectIndex).not.toHaveBeenCalled();
+  });
+
+  it("does not fire j shortcut when metaKey is held", () => {
+    renderHook(() =>
+      useKeyboardShortcuts({
+        findings,
+        selectedIndex: 0,
+        onSelectIndex,
+        onOpenFinding,
+        onExport,
+        searchInputRef: { current: null },
+      }),
+    );
+
+    fireKey("j", undefined, { metaKey: true });
+    expect(onSelectIndex).not.toHaveBeenCalled();
+  });
+
+  it("does not fire j shortcut when altKey is held", () => {
+    renderHook(() =>
+      useKeyboardShortcuts({
+        findings,
+        selectedIndex: 0,
+        onSelectIndex,
+        onOpenFinding,
+        onExport,
+        searchInputRef: { current: null },
+      }),
+    );
+
+    fireKey("j", undefined, { altKey: true });
+    expect(onSelectIndex).not.toHaveBeenCalled();
+  });
+
+  it("does not focus search when / is pressed with ctrlKey held", () => {
+    const input = document.createElement("input");
+    const focusSpy = vi.spyOn(input, "focus");
+    const ref = { current: input };
+
+    renderHook(() =>
+      useKeyboardShortcuts({
+        findings,
+        selectedIndex: 0,
+        onSelectIndex,
+        onOpenFinding,
+        onExport,
+        searchInputRef: ref,
+      }),
+    );
+
+    fireKey("/", undefined, { ctrlKey: true });
+    expect(focusSpy).not.toHaveBeenCalled();
   });
 
   it("cleans up event listener on unmount", () => {

@@ -207,6 +207,13 @@ export function FindingsTable({
     enabled: shouldVirtualize,
   });
 
+  useEffect(() => {
+    if (highlightedIndex === undefined) return;
+    if (shouldVirtualize) {
+      virtualizer.scrollToIndex(highlightedIndex, { align: "auto" });
+    }
+  }, [highlightedIndex, shouldVirtualize, virtualizer]);
+
   function handleCopyLink(e: React.MouseEvent, findingId: number) {
     e.stopPropagation();
     const url = `${window.location.origin}/analyses/${analysisId}?finding=${findingId}`;
