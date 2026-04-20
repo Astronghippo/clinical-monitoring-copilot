@@ -161,4 +161,21 @@ describe("ProtocolSummary", () => {
     // Edit button should be back
     expect(screen.getByRole("button", { name: /edit/i })).toBeInTheDocument();
   });
+
+  it("shows error when save fails", async () => {
+    const mockPatch = vi.fn().mockRejectedValueOnce(new Error("Server error"));
+    vi.spyOn(await import("../lib/api"), "api", "get").mockReturnValue({
+      patchProtocolSpec: mockPatch,
+    } as never);
+
+    render(<ProtocolSummary spec={mockSpec} protocolId={1} />);
+    fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() =>
+      expect(screen.getByText("Server error")).toBeInTheDocument(),
+    );
+    // Should still be in edit mode
+    expect(screen.getByRole("button", { name: /save/i })).toBeInTheDocument();
+  });
 });

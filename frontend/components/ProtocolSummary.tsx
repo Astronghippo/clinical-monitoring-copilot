@@ -17,7 +17,7 @@ function formatWindow(minus: number, plus: number): string {
 
 function newVisit(): VisitDef {
   return {
-    visit_id: `V${Date.now()}`,
+    visit_id: crypto.randomUUID(),
     name: "",
     nominal_day: 0,
     window_minus_days: 0,
@@ -28,7 +28,7 @@ function newVisit(): VisitDef {
 
 function newCriterion(): EligibilityCriterion {
   return {
-    criterion_id: `C${Date.now()}`,
+    criterion_id: crypto.randomUUID(),
     kind: "inclusion",
     text: "",
   };

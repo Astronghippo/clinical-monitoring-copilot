@@ -53,12 +53,14 @@ export interface EligibilityCriterion {
   criterion_id: string;
   kind: "inclusion" | "exclusion";
   text: string;
+  structured_check?: Record<string, unknown> | null;
 }
 
 export interface ProtocolSpec {
   study_id: string;
   visits: VisitDef[];
   eligibility: EligibilityCriterion[];
+  source_pages?: Record<string, number[]>;
 }
 
 export interface ProtocolOverview {
