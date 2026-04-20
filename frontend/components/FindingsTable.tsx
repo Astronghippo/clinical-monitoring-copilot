@@ -1,17 +1,17 @@
 "use client";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { clsx } from "clsx";
-import type { Finding, FindingStatus } from "@/lib/types";
+import type { Finding, FindingStatus, Severity, AnalyzerKind } from "@/lib/types";
 import { FindingStatusBadge } from "./FindingStatusBadge";
 
-const SEV_STYLES: Record<string, string> = {
+const SEV_STYLES: Record<Severity, string> = {
   critical: "bg-red-100 text-red-800",
   major: "bg-amber-100 text-amber-800",
   minor: "bg-slate-100 text-slate-700",
 };
 
-const ANALYZER_LABEL: Record<string, string> = {
+const ANALYZER_LABEL: Record<AnalyzerKind, string> = {
   visit_windows: "Visit window",
   completeness: "Completeness",
   eligibility: "Eligibility",
@@ -60,7 +60,15 @@ function FindingRow({
       data-testid={`finding-row-${f.id}`}
       style={style}
       className="flex items-center cursor-pointer border-b border-slate-100 hover:bg-slate-50 text-sm"
+      role="button"
+      tabIndex={0}
       onClick={() => onSelect?.(f)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect?.(f);
+        }
+      }}
     >
       {onToggleSelected && (
         <div
@@ -149,7 +157,7 @@ function TableHeader({
 }) {
   return (
     <div className="flex items-center bg-slate-50 text-left text-slate-600 text-sm font-medium border-b border-slate-200">
-      {onToggleSelected && <div className="px-3 py-2 w-10 flex-shrink-0">✓</div>}
+      {onToggleSelected && <div className="px-3 py-2 w-10 flex-shrink-0"><span aria-label="Select">✓</span></div>}
       <div className="px-3 py-2 w-24 flex-shrink-0">Severity</div>
       <div className="px-3 py-2 w-32 flex-shrink-0">Analyzer</div>
       <div className="px-3 py-2 w-28 flex-shrink-0">Subject</div>
@@ -172,6 +180,15 @@ export function FindingsTable({
 }: Props) {
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const parentRef = useRef<HTMLDivElement>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current !== undefined) {
+        clearTimeout(copyTimerRef.current);
+      }
+    };
+  }, []);
 
   const shouldVirtualize = findings.length > VIRTUALIZE_THRESHOLD;
 
@@ -188,7 +205,10 @@ export function FindingsTable({
     const url = `${window.location.origin}/analyses/${analysisId}?finding=${findingId}`;
     navigator.clipboard.writeText(url).then(() => {
       setCopiedId(findingId);
-      setTimeout(() => setCopiedId(null), 1500);
+      if (copyTimerRef.current !== undefined) {
+        clearTimeout(copyTimerRef.current);
+      }
+      copyTimerRef.current = setTimeout(() => setCopiedId(null), 1500);
     });
   }
 

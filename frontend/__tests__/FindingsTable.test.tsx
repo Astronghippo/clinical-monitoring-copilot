@@ -55,6 +55,12 @@ describe("FindingsTable", () => {
 
 describe("FindingsTable – virtualization", () => {
   it("does not render all 100 rows when given 100 findings (virtualization active)", () => {
+    // Save original descriptor so we can restore it faithfully after the test
+    const originalDescriptor = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      "offsetHeight",
+    );
+
     // Mock offsetHeight so the virtualizer sees a 600px container in jsdom
     Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
       configurable: true,
@@ -72,13 +78,13 @@ describe("FindingsTable – virtualization", () => {
     expect(rows.length).toBeGreaterThan(0);
     expect(rows.length).toBeLessThan(100);
 
-    // Restore
-    Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
-      configurable: true,
-      get() {
-        return 0;
-      },
-    });
+    // Restore original descriptor (or remove the override if there was none)
+    if (originalDescriptor) {
+      Object.defineProperty(HTMLElement.prototype, "offsetHeight", originalDescriptor);
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (HTMLElement.prototype as any).offsetHeight;
+    }
   });
 
   it("renders all rows when given 5 findings (small lists show everything)", () => {
