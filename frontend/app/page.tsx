@@ -6,6 +6,7 @@ import { ProtocolSummary } from "@/components/ProtocolSummary";
 import { ProtocolOverviewCard } from "@/components/ProtocolOverviewCard";
 import { DatasetUploader } from "@/components/DatasetUploader";
 import { RunAnalysisButton } from "@/components/RunAnalysisButton";
+import { RecentAnalyses } from "@/components/RecentAnalyses";
 import type { Protocol, Dataset } from "@/lib/types";
 
 export default function Home() {
@@ -37,6 +38,7 @@ export default function Home() {
           </a>
         </div>
       </header>
+      <RecentAnalyses />
       <ProtocolUploader onUploaded={setProtocol} />
       {protocol && (
         <>
