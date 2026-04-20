@@ -16,14 +16,14 @@ export default function Home() {
 
   return (
     <main className="space-y-6">
-      <header className="flex items-start justify-between gap-4">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Clinical Monitoring Copilot</h1>
+          <h1 className="text-2xl font-bold sm:text-3xl">Clinical Monitoring Copilot</h1>
           <p className="text-slate-600">
             Upload a protocol and patient dataset to detect deviations.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <a
             href="/analyses"
             className="rounded border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 shadow-sm hover:bg-slate-50"

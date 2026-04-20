@@ -303,7 +303,7 @@ export default function AnalysisPage() {
         </Link>
       </div>
 
-      <header className="flex items-end justify-between">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <EditableHeading
             value={analysis.name}
@@ -321,7 +321,7 @@ export default function AnalysisPage() {
           </p>
         </div>
         {!inProgress && (
-          <div className="flex gap-2 text-sm">
+          <div className="flex flex-wrap gap-2 text-sm">
             <span className="rounded bg-red-100 px-2 py-1 text-red-800">
               Critical: {counts.critical}
             </span>
@@ -350,7 +350,7 @@ export default function AnalysisPage() {
 
           {analysis.findings.length > 0 && (
             <>
-              <div className="flex gap-2 mb-4">
+              <div className="flex flex-wrap gap-2 mb-4">
                 <a
                   href={`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/analyses/${analysis.id}/report.pdf`}
                   className="inline-flex items-center gap-1 rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"

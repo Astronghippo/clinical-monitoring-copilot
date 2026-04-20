@@ -102,7 +102,7 @@ function FindingRow({
           </span>
         </Tooltip>
       </div>
-      <div className="px-3 py-2 w-32 flex-shrink-0 text-slate-600">
+      <div className="hidden sm:block px-3 py-2 w-32 flex-shrink-0 text-slate-600">
         {ANALYZER_LABEL[f.analyzer] ?? f.analyzer}
       </div>
       <div className="px-3 py-2 w-28 flex-shrink-0 font-mono">
@@ -122,7 +122,7 @@ function FindingRow({
         )}
       </div>
       <div className="px-3 py-2 flex-1 min-w-0">{f.summary}</div>
-      <div className="px-3 py-2 w-20 flex-shrink-0 text-slate-500">
+      <div className="hidden sm:block px-3 py-2 w-20 flex-shrink-0 text-slate-500">
         <Tooltip text="AI confidence score (0–100%). Higher is more certain.">
           <span>{(f.confidence * 100).toFixed(0)}%</span>
         </Tooltip>
@@ -170,10 +170,10 @@ function TableHeader({
     <div className="flex items-center bg-slate-50 text-left text-slate-600 text-sm font-medium border-b border-slate-200 dark:bg-gray-900 dark:text-gray-300 dark:border-gray-700">
       {onToggleSelected && <div className="px-3 py-2 w-10 flex-shrink-0"><span aria-label="Select">✓</span></div>}
       <div className="px-3 py-2 w-24 flex-shrink-0">Severity</div>
-      <div className="px-3 py-2 w-32 flex-shrink-0">Analyzer</div>
+      <div className="hidden sm:block px-3 py-2 w-32 flex-shrink-0">Analyzer</div>
       <div className="px-3 py-2 w-28 flex-shrink-0">Subject</div>
       <div className="px-3 py-2 flex-1 min-w-0">Finding</div>
-      <div className="px-3 py-2 w-20 flex-shrink-0">Confidence</div>
+      <div className="hidden sm:block px-3 py-2 w-20 flex-shrink-0">Confidence</div>
       {onStatusChange && <div className="px-3 py-2 w-28 flex-shrink-0">Status</div>}
       {analysisId !== undefined && <div className="px-3 py-2 w-10 flex-shrink-0"></div>}
     </div>
@@ -247,7 +247,7 @@ export function FindingsTable({
   };
 
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
       <TableHeader
         onToggleSelected={onToggleSelected}
         onStatusChange={onStatusChange}
